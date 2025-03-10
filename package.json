@@ -1,0 +1,26 @@
+{
+  "name": "auto-complete.js",
+  "version": "1.0.0",
+  "keywords": [
+    "autocomplete",
+    "contenteditable",
+    "javascript"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "angezid",
+    "url": "https://github.com/angezid"
+  },
+  "description": "",
+  "repository": "angezid/auto-complete.js",
+  "bugs": {
+    "url": "https://github.com/angezid/auto-complete.js/issues"
+  },
+  "homepage": "https://github.com/angezid/auto-complete.js",
+  "scripts": {
+    "browser-test": "node test/test.js",
+    "build": "npm run browser-test",
+    "test": "npm run browser-test"
+  }
+}
+  
