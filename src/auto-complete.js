@@ -13,90 +13,144 @@
 	'use strict';
 
 	function autoComplete(ctx, options) {
+		this.ctx = ctx;
+		this.options = options;
 
-		const opt = Object.assign({}, {
-			queryChars : null,
-			triggerChars : null,
-			regex : null,
-			//wrapper : true,
-			ignoreCase : true,
-			debounce : 0,
-			threshold : 1,
-			suggestions : [],
-			maxResults : 10,
-			debug : false,
-		}, options);
+		this.reRegisterElement = function(ctx) {
+			removeElementEvents();
+			registerElement(ctx)
+		}
 
-		const listClass = 'autocomplete-list',
-			listItemClass = 'autocomplete-item',
-			suggestions = opt.suggestions.map(wd => { return { original : wd, lowercase : wd.toLowerCase() } });
+		this.destroy = function(ctx) {
+			removeElementEvents();
+			removeEvents();
+		}
 
-		let target,
+		const name = 'autocomplete',
+			libName = 'auto-complete.js',
+			listClass = name + '-list',
+			listItemClass = name + '-item';
+
+		let element,
 			listbox,
 			queryRegex,
+			regexSource,
+			isText,
 			clientRect,
-			suggestionLength = 0,
+			selectionStart,
+			itemLength = 0,
 			selectedIndex = 0;
 
-		autoComplete.init = function() {
-			if (typeof ctx === 'string') {
-				target = document.querySelector(ctx);
+		const opt = Object.assign({}, {
+			suggestions : [],
+			queryChars : '\\d\\p{L}_-',
+			//queryChars : '\\S',
+			triggerChars : '\\s$+<=>^`|~\\p{P}',
+			regex : null,
+			caseSensitive : false,
+			debounce : 0,
+			threshold : 1,
+			maxResults : 15,
+			results : () => {},
+			debug : false,
+		}, this.options);
 
-			} else if (ctx instanceof HTMLElement) {
-				target = ctx;
-			}
+		queryRegex = (opt.regex instanceof RegExp) ? opt.regex : regExpCreator.create(opt, libName);
+		log(libName +  ': query RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
 
-			if (opt.regex && opt.regex instanceof RegExp) {
-				queryRegex = opt.regex;
-
-			} else {
-				const queryChars = preprocess(opt.queryChars) || '\\p{L}';
-				let chars = opt.triggerChars;
-
-				if (chars) {
-					chars = chars.replace(/\s/g, ' ');
-					chars = preprocess(chars).replace(' ', '\\s');
-				}
-
-				chars = chars || '\\s$+<=>^`|~\\p{P}';
-				queryRegex = new RegExp('(^|[' + chars + '])([' + queryChars + ']+)$', 'u');
-			}
-			log('init(): queryRegex - ' + queryRegex.source);
-		};
-
-		autoComplete.init();
+		element = registerElement(this.ctx);
+		isText = (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement);
 		createListbox();
 		registerEvents();
 
-		/*if (opt.wrapper) {
-			const wrapper = document.createElement('div');
-		}*/
+		function registerElement(ctx) {
+			//let elem = (ctx instanceof HTMLElement) ? ctx : document.querySelector(ctx || '#' + name);
+			let elem = typeof ctx === 'string' ? document.querySelector(ctx || '#' + name) : ctx;
+
+			addEvent(elem, 'input', onInput);
+			addEvent(elem, 'blur', hide);
+			addEvent(elem, 'keydown', navigateList);
+			return elem;
+		}
 
 		function createListbox() {
-			listbox = document.createElement('ul');
-			listbox.setAttribute('class', listClass);
-			listbox.setAttribute("hidden", "");
+			listbox = createElement('ul', listClass);
 			document.body.appendChild(listbox);
 			listbox.addEventListener('mousedown', (e) => e.preventDefault());
+			listbox.addEventListener('click', (e) => insert(e.target.getAttribute('data-insert')));
+		}
+
+		function createElement(name, klass) {
+			let elem = document.createElement(name);
+			if (klass) elem.setAttribute('class', klass);
+			return elem;
 		}
 
 		function registerEvents() {
-			target.addEventListener('input', onInput);
-			target.addEventListener('blur', hide);
-			target.addEventListener('keydown', navigateList);
-			window.addEventListener('resize', hide);
-			document.addEventListener('click', onOutsideClick);
+			addEvent(window, 'resize', hide);
+			addEvent(document, 'click', outsideClick);
+		}
+
+		function outsideClick(e) {
+			if ( !listbox.contains(e.target) && !listbox.contains(e.target)) hide();
 		}
 
 		function onInput() {
 			const obj = getQuery();
 
-			if (obj && obj.query.length >= opt.threshold && clientRect) show(obj);
-			else hide();
+			if (obj && obj.query.length >= opt.threshold && clientRect) {
+				let array = getSuggestions(obj);
+
+				if (opt.filter && array.length) array = opt.filter(query, array);
+
+				itemLength = array.length;
+
+				if (itemLength) {
+					show(array);
+					return;
+				}
+			}
+			hide();
+		}
+
+		function getQuery() {
+			let text;
+			if (isText) {
+				text = element.value;
+				selectionStart = element.selectionStart;
+				text = text.substr(0, selectionStart);
+				clientRect = getClientRect(element);
+
+			} else {
+				text = getText();
+			}
+
+			const rm = queryRegex.exec(text);
+			if (rm) {
+				const match = opt.ignoreCase ? rm[0].toLowerCase() : rm[0],
+					query = opt.ignoreCase ? rm[2].toLowerCase() : rm[2];
+
+				return { match : match, query : query, offset : rm[1].length }
+			}
+
+			const len = text.length;
+			log(libName + ': No match. ', len > 20 ? ' ... ' + text.slice(len - 20) : text);
+			return null;
+		}
+
+		function getText() {
+			const rng = getSelection().getRangeAt(0),
+				range = document.createRange();
+
+			clientRect = rng.getBoundingClientRect();
+
+			range.selectNodeContents(element);
+			range.setEnd(rng.startContainer, rng.startOffset);
+			return range.toString();
 		}
 
 		function navigateList(e) {
-			if (listbox.hasAttribute('hidden')) return;
+			if (listbox.style.display === 'none') return;
 
 			const key = e.key;
 
@@ -123,13 +177,12 @@
 		}
 
 		function next() {
-			//selectedIndex = (selectedIndex + 1) % suggestionLength;
-			selectedIndex = selectedIndex >= suggestionLength - 1 ? 0 : selectedIndex + 1;
+			selectedIndex = selectedIndex >= itemLength - 1 ? 0 : selectedIndex + 1;
 			update();
 		}
 
 		function previous() {
-			selectedIndex = selectedIndex <= 0 ? suggestionLength - 1 : selectedIndex - 1;
+			selectedIndex = selectedIndex <= 0 ? itemLength - 1 : selectedIndex - 1;
 			update();
 		}
 
@@ -143,95 +196,54 @@
 			// Ensure the selected item is visible in the listbox
 			const selectedItem = items[selectedIndex];
 			if (selectedItem) {
-				selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				selectedItem.scrollIntoView({ block : 'nearest', behavior : 'smooth' });
 			}
 		}
 
-		function onOutsideClick(e) {
-			if ( !listbox.contains(e.target) && !listbox.contains(e.target)) hide();
-		}
-
-		function getQuery() {
-			const rm = queryRegex.exec(getTextBeforeCaret());
-			if (rm) {
-				const match = opt.ignoreCase ? rm[0].toLowerCase() : rm[0],
-					query = opt.ignoreCase ? rm[2].toLowerCase() : rm[2];
-
-				return { match : match, query : query, charLength : rm[1].length }
-			}
-
-			log("getQuery(): Query regex is failed to match - " + queryRegex.source);
-			return null;
-		}
-
-		function getTextBeforeCaret() {
-			const rng = getSelection().getRangeAt(0),
-				range = document.createRange();
-
-			clientRect = rng.getBoundingClientRect();
-
-			range.selectNodeContents(target);
-			range.setEnd(rng.startContainer, rng.startOffset);
-			return range.toString();
-		}
-
-		function show(obj) {
-			const list = getSuggestions(obj);
-			suggestionLength = list.length;
-
-			if ( !suggestionLength) {
-				hide();
-				return;
-			}
-
+		function show(list) {
 			listbox.innerHTML = '';
 
-			list.forEach((item, i) => {
-				const li = document.createElement('li');
+			list.forEach((obj, i) => {
+				const li = createElement('li', 'autocomplete-item');
+				li.setAttribute('data-insert', obj.insert);
+				li.textContent = obj.listItem;
 
-				/*if (i === selectedIndex) {
-					li.setAttribute('aria-selected', true);
-				}*/
-
-				li.setAttribute('class', 'autocomplete-item');
-				li.textContent = item.listItem;
-
-				li.addEventListener('click', () => {
-					insert(item.insert);
-				});
 				listbox.appendChild(li);
+				listbox.style.display = 'block';
 			});
 
 			const rect = getPlacement();
 			listbox.style.top = rect.top + 'px';
 			listbox.style.left = rect.left + 'px';
-
-			listbox.removeAttribute('hidden');
-			selectedIndex = -1;
+			selectedIndex = 0;
 		}
 
 		function hide() {
-			listbox.setAttribute('hidden', '');
+			listbox.style.display = 'none';
 		}
 
 		function getSuggestions(obj) {
+			const length = opt.suggestions.length,
+				queryLen = obj.query.length,
+				matchLen = obj.match.length;
+
 			let array = [],
-				count = 0;
+				count = 0,
+				index, item, str;
 
-			for (let i = 0; i < suggestions.length; i++) {
-				const original = suggestions[i].original,
-					str = opt.ignoreCase ? suggestions[i].lowercase : original,
-					index = str.indexOf(obj.query);
+			for (let i = 0; i < length; i++) {
+				item = opt.suggestions[i];
+				str = opt.ignoreCase ? item.toLowerCase() : item;
+				index = str.indexOf(obj.query);
 
-				if (index === 0 || str.indexOf(obj.match) === 0) {
+				if (index === 0 && str.length > queryLen || str.length > matchLen && str.indexOf(obj.match) === 0) {
+					const cutIndex = obj.match.length - (index === 0 ? obj.offset : 0);
+					array.push({ listItem : item, insert : item.substr(cutIndex) });
+
 					if (++count > opt.maxResults) break;
-
-					const offset = index === 0 ? obj.charLength : 0;
-					array.push({ listItem : original, insert : original.substr(obj.match.length - offset) });
 				}
 			}
-			array.sort((a, b) => b.length - a.length);
-
+			log(libName + ': Suggestion count = ',  array.length);
 			return array;
 		}
 
@@ -254,60 +266,178 @@
 			}
 
 			if (top + height > bottom) {
-				top = clientRect.top - 20 - height;
+				top = top - height - (clientRect.height + 10);
 			}
 
-			return { top: top + 5, left: left + 5 };
+			return { top : top + 5, left : left + 5 };
+		}
+
+		function getClientRect(elem) {
+			const rect = elem.getBoundingClientRect(),
+				style = window.getComputedStyle(elem),
+				div = document.createElement('div');
+			document.body.appendChild(div);
+
+			const properties = [
+				'letterSpacing',
+				'textAlign',
+				'textTransform',
+			];
+
+			properties.forEach(prop => {
+				div.style[prop] = style.getPropertyValue(prop);
+			});
+
+			Object.assign(div.style, {
+				position : "absolute",
+				visibility : "hidden",
+				wordWrap : "break-word",
+				whiteSpace : "pre-wrap",
+				top : rect.top + "px",
+				left : rect.left + "px",
+				width : rect.width + "px",
+				height : rect.height + "px",
+				font : style.font,
+				padding : style.padding,
+				border : style.border,
+				lineHeight : style.lineHeight,
+			});
+
+			const text = elem.value;
+			div.textContent = text.substring(0, selectionStart);
+
+			const span = document.createElement('span');
+			span.textContent = text.charAt(selectionStart) || '.';
+			div.appendChild(span);
+
+			const spanRect = span.getBoundingClientRect(),
+				isScrolledY = elem.scrollHeight > rect.height,
+				isScrolledX = elem.scrollLeft > rect.width,
+				height = spanRect.height,
+				top = rect.top + span.offsetTop - (isScrolledY ? elem.scrollTop : 0),
+				left = rect.left  + span.offsetLeft - (isScrolledX ? elem.scrollLeft : 0),
+				bottom = top + height;
+
+			//console.log(isScrolledY, 'elem.scrollTop=', elem.scrollTop, 'rect.top=', rect.top, 'spanRect.top=', spanRect.top, 'span.offsetTop=', span.offsetTop, 'div.scrollHeight=', div.scrollHeight );
+
+			return { top, left, bottom, height };
 		}
 
 		function insert(text) {
-			text = text.replace(/[<>&"']/g, m => {
-				return m === '<' ? '&lt;' : m === '>' ? '&gt;' : m === '&' ? '&amp;' : m === '"' ? '&quot;' : '&#039;';
-			});
-			document.execCommand('insertHTML', false, text);
+			if (isText) {
+				const value = element.value,
+					index = element.selectionStart;
+
+				element.value = value.substr(0, index) + text + value.substr(index);
+				//element.value = value.substr(0, selectionStart) + text + value.substr(selectionStart);
+
+			} else {
+				text = text.replace(/[<>&"']/g, m => {
+					return m === '<' ? '&lt;' : m === '>' ? '&gt;' : m === '&' ? '&amp;' : m === '"' ? '&quot;' : '&#039;';
+				});
+				document.execCommand('insertHTML', false, text);
+			}
 			hide();
 		}
 
 		function getSelection() {
-			const root = target.getRootNode();
+			const root = element.getRootNode();
 			if (root.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
 				try { return root.getSelection(); } catch (e) { }
 			}
 			return window.getSelection();
 		}
 
-		function preprocess(value) {
-			if (value && value.length) {
-				const array = value.split(/(\\[pPu]\{[^}]+\}|\\[wdWDS]|.)/);
-				// minimal length of unicode escape class, e.g. '\p{L}' is 5;
-				return distinct(array).map(str => str.length > 4 || /\\[wdWDS]/.test(str) ? str : str.replace(/[-^\]\\]/g, '\\$&')).join('');
-			}
-			return null;
-		}
-
-		function distinct(array) {
-			const result = [];
-			array.forEach(item => {
-				if ( !result.includes(item)) result.push(item);
-			});
-			return result;
-		}
-
 		function log(msg) {
 			if (opt.debug) {
-				console.log(msg);
+				console.log([...arguments].join(' '));
 			}
 		}
 
-		autoComplete.destroy = function() {
-			target.removeEventListener('input', onInput);
-			target.removeEventListener('blur', hide);
-			target.removeEventListener('keydown', navigateList);
-			document.removeEventListener('click', onOutsideClick);
-			window.removeEventListener('resize', hide);
-			document.body.removeChild(listbox);
-		};
+		function removeElementEvents() {
+			if (element) {
+				remove(element, 'input', onInput);
+				remove(element, 'blur', hide);
+				remove(element, 'keydown', navigateList);
+			}
+		}
+
+		function removeEvents() {
+			remove(document, 'click', outsideClick);
+			remove(window, 'resize', hide);
+
+			if (listbox) document.body.removeChild(listbox);
+		}
+
+		function addEvent(elem, type, fn) {
+			elem.addEventListener(type, fn);
+		}
+
+		function remove(elem, type, fn) {
+			elem.removeEventListener(type, fn);
+		}
 	}
+
+	function distinct(array) {
+		const result = [];
+		array.forEach(item => {
+			if ( !result.includes(item)) result.push(item);
+		});
+		return result;
+	}
+
+	const regExpCreator = {
+		create : function(opt, libName) {
+			const queryChars = this.preprocess(opt.queryChars),
+				quantifier = opt.threshold === 0 ? '*' : '+',
+				queryPattern = `([${queryChars}]${quantifier})`;
+
+			let triggerPattern;
+
+			if (Array.isArray(opt.triggerChars)) {
+				let pattern = opt.triggerChars.map((str, i) => i === 0 && str === '^' ? str : this.escapeChars(str)).join('|');
+				triggerPattern = '(' + pattern + ')';
+
+			} else {
+				const chars = this.preprocess(opt.triggerChars);
+				triggerPattern = '(^|[' + chars + '])';
+			}
+
+			if (opt.debug) {
+				console.log(libName + ": RegExp trigger pattern - " + triggerPattern, ' query pattern - ' + queryPattern);
+			}
+			return new RegExp(`${triggerPattern}${queryPattern}$`, 'u');
+		},
+
+		escapeChars : function(value) {
+			if (value && value.length) {
+				const array = this.split(value);
+				return array.map(str => str.length > 4 || /\\[wdsWDSnt]/.test(str) ? str : this.escape(str)).join('');
+			}
+			return '';
+		},
+
+		preprocess : function(value) {
+			if (value && value.length) {
+				let array = this.split(value);
+				array = distinct(array);
+				return array.map(str => str.length > 4 || /\\[wdsWDSnt]/.test(str) ? str : this.escapeCharSet(str)).join('');
+			}
+			return '';
+		},
+
+		escapeCharSet : function(str) {
+			return str.replace(/[-^\]\\]/g, '\\$&');
+		},
+
+		escape : function(str) {
+			return str.replace(/[[\]/{}()*+?.\\^$|]/g, '\\$&');
+		},
+
+		split : function(str) {
+			return str.split(/(\\[pPu]\{[^}]+\}|\\[wdsWDSnt]|.)/);
+		}
+	};
 
 	return autoComplete;
 });
