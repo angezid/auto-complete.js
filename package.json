@@ -4,6 +4,8 @@
   "keywords": [
     "autocomplete",
     "contenteditable",
+    "textarea",
+    "input",
     "javascript"
   ],
   "license": "MIT",
@@ -18,9 +20,7 @@
   },
   "homepage": "https://github.com/angezid/auto-complete.js",
   "scripts": {
-    "browser-test": "node test/test.js",
-    "build": "npm run browser-test",
-    "test": "npm run browser-test"
+    "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
   

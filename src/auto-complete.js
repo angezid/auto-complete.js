@@ -26,18 +26,20 @@
 			removeEvents();
 		}
 
+		this.optimize = function(array) {
+			return optimize(array);
+		}
+
 		const name = 'autocomplete',
-			libName = 'auto-complete.js',
-			listClass = name + '-list',
-			listItemClass = name + '-item';
+			libName = 'auto-complete.js';
 
 		let element,
-			listbox,
 			queryRegex,
 			regexSource,
+			listbox,
 			isText,
-			clientRect,
-			selectionStart,
+			isInput,
+			caretRect,
 			itemLength = 0,
 			selectedIndex = 0;
 
@@ -47,25 +49,36 @@
 			//queryChars : '\\S',
 			triggerChars : '\\s$+<=>^`|~\\p{P}',
 			regex : null,
+			listTagName : 'ul',
+			listItemTagName : 'li',
+			listClass : name + '-list',
+			listItemClass : name + '-item',
+			listOffsetX : 5,
+			listOffsetY : 5,
 			caseSensitive : false,
-			debounce : 0,
+			wholeMatch : true,
+			debounce : 1,
 			threshold : 1,
 			maxResults : 15,
-			results : () => {},
+			//filter : () => {},
 			debug : false,
 		}, this.options);
 
 		queryRegex = (opt.regex instanceof RegExp) ? opt.regex : regExpCreator.create(opt, libName);
-		log(libName +  ': query RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
+		log(libName + ': query RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
 
 		element = registerElement(this.ctx);
-		isText = (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement);
 		createListbox();
 		registerEvents();
 
+		if (opt.optimize) {
+			opt.suggestions = optimize(opt.suggestions);
+		}
+
 		function registerElement(ctx) {
-			//let elem = (ctx instanceof HTMLElement) ? ctx : document.querySelector(ctx || '#' + name);
-			let elem = typeof ctx === 'string' ? document.querySelector(ctx || '#' + name) : ctx;
+			const elem = typeof ctx === 'string' ? document.querySelector(ctx || '#' + name) : ctx;
+
+			isText = ((isInput = elem instanceof HTMLInputElement) || elem instanceof HTMLTextAreaElement);
 
 			addEvent(elem, 'input', onInput);
 			addEvent(elem, 'blur', hide);
@@ -74,10 +87,14 @@
 		}
 
 		function createListbox() {
-			listbox = createElement('ul', listClass);
+			listbox = createElement(opt.listTagName, opt.listClass);
 			document.body.appendChild(listbox);
-			listbox.addEventListener('mousedown', (e) => e.preventDefault());
-			listbox.addEventListener('click', (e) => insert(e.target.getAttribute('data-insert')));
+			addEvent(listbox, 'mousedown', (e) => e.preventDefault());
+			addEvent(listbox, 'click', listItemClick);
+		}
+
+		function listItemClick(e) {
+			insert(e.target.getAttribute('data-insert'));
 		}
 
 		function createElement(name, klass) {
@@ -87,6 +104,7 @@
 		}
 
 		function registerEvents() {
+			addEvent(window, 'beforeunload', (e) => { caretRect = null; });    // ???
 			addEvent(window, 'resize', hide);
 			addEvent(document, 'click', outsideClick);
 		}
@@ -96,12 +114,16 @@
 		}
 
 		function onInput() {
+			debounce(process(), opt.debounce);
+		}
+
+		function process() {
 			const obj = getQuery();
 
-			if (obj && obj.query.length >= opt.threshold && clientRect) {
+			if (obj && obj.query.length >= opt.threshold && caretRect) {
 				let array = getSuggestions(obj);
 
-				if (opt.filter && array.length) array = opt.filter(query, array);
+				if (typeof opt.filter === 'function' && array.length) array = opt.filter(array);
 
 				itemLength = array.length;
 
@@ -114,12 +136,13 @@
 		}
 
 		function getQuery() {
+			caretRect = null;
 			let text;
+
 			if (isText) {
-				text = element.value;
-				selectionStart = element.selectionStart;
-				text = text.substr(0, selectionStart);
-				clientRect = getClientRect(element);
+				const lastIndex = element.selectionStart;
+				text = element.value.substr(0, lastIndex);
+				caretRect = getCaretCoordinates(element, lastIndex);
 
 			} else {
 				text = getText();
@@ -127,8 +150,8 @@
 
 			const rm = queryRegex.exec(text);
 			if (rm) {
-				const match = opt.ignoreCase ? rm[0].toLowerCase() : rm[0],
-					query = opt.ignoreCase ? rm[2].toLowerCase() : rm[2];
+				const match = opt.caseSensitive ? rm[0] : rm[0].toLowerCase(),
+					query = opt.caseSensitive ? rm[2] : rm[2].toLowerCase();
 
 				return { match : match, query : query, offset : rm[1].length }
 			}
@@ -142,7 +165,7 @@
 			const rng = getSelection().getRangeAt(0),
 				range = document.createRange();
 
-			clientRect = rng.getBoundingClientRect();
+			caretRect = rng.getBoundingClientRect();
 
 			range.selectNodeContents(element);
 			range.setEnd(rng.startContainer, rng.startOffset);
@@ -150,8 +173,6 @@
 		}
 
 		function navigateList(e) {
-			if (listbox.style.display === 'none') return;
-
 			const key = e.key;
 
 			if (key === 'Escape') {
@@ -167,8 +188,8 @@
 				e.preventDefault(e);
 				next();
 
-			} else if (key === 'Enter') {
-				const selected = document.querySelector(`ul.${listClass} > li.selected`);
+			} else if (key === 'Enter' || key === 'Tab') {
+				const selected = document.querySelector(`ul.${opt.listClass} > li.selected`);
 				if (selected) {
 					e.preventDefault(e);
 					selected.click();
@@ -187,7 +208,7 @@
 		}
 
 		function update() {
-			const items = document.querySelectorAll(`ul.${listClass} > li.${listItemClass}`);
+			const items = document.querySelectorAll(`ul.${opt.listClass} > li.${opt.listItemClass}`);
 
 			items.forEach((item, index) => {
 				item.classList.toggle('selected', index === selectedIndex);
@@ -202,19 +223,21 @@
 
 		function show(list) {
 			listbox.innerHTML = '';
+			listbox.style.height = '10';    // resets scrollbar
 
 			list.forEach((obj, i) => {
-				const li = createElement('li', 'autocomplete-item');
-				li.setAttribute('data-insert', obj.insert);
-				li.textContent = obj.listItem;
+				const elem = createElement(opt.listItemTagName, opt.listItemClass);
+				elem.setAttribute('data-insert', obj.insert);
+				elem.textContent = obj.value;
 
-				listbox.appendChild(li);
-				listbox.style.display = 'block';
+				listbox.appendChild(elem);
 			});
+			listbox.style.display = 'block';    // must be set before calling 'getListPlacement()'
 
-			const rect = getPlacement();
+			const rect = getListPlacement();
 			listbox.style.top = rect.top + 'px';
 			listbox.style.left = rect.left + 'px';
+			listbox.style.height = 'auto';
 			selectedIndex = 0;
 		}
 
@@ -222,105 +245,135 @@
 			listbox.style.display = 'none';
 		}
 
+		function optimize(suggestions) {
+			const obj = {};
+
+			suggestions.forEach((str) => {
+				let key = getKey(str),
+					array = obj[key];
+
+				if (array) array.push(str);
+				else obj[key] = [str];
+			});
+			return obj;
+		}
+
+		function getKey(str) {
+			let key = '';
+			for (let i = 0; i < opt.threshold; i++) {
+				key += str.charAt(i);
+			}
+			return opt.caseSensitive ? key : key.toLowerCase();
+		}
+
 		function getSuggestions(obj) {
-			const length = opt.suggestions.length,
+			const whole = opt.wholeMatch,
 				queryLen = obj.query.length,
-				matchLen = obj.match.length;
+				matchLen = obj.match.length,
+				suggestions = Array.isArray(opt.suggestions) ? opt.suggestions : opt.suggestions[getKey(obj.query)];
 
 			let array = [],
 				count = 0,
 				index, item, str;
 
-			for (let i = 0; i < length; i++) {
-				item = opt.suggestions[i];
-				str = opt.ignoreCase ? item.toLowerCase() : item;
+			if ( !suggestions) {
+				log(libName + ': Suggestion array is undefined for ', obj.query);
+				return array;
+			}
+
+			for (let i = 0; i < suggestions.length; i++) {
+				item = suggestions[i];
+				str = opt.caseSensitive ? item : item.toLowerCase();
 				index = str.indexOf(obj.query);
 
-				if (index === 0 && str.length > queryLen || str.length > matchLen && str.indexOf(obj.match) === 0) {
+				if (index === 0 && str.length > queryLen || whole && str.length > matchLen && str.indexOf(obj.match) === 0) {
 					const cutIndex = obj.match.length - (index === 0 ? obj.offset : 0);
-					array.push({ listItem : item, insert : item.substr(cutIndex) });
+					array.push({ value : item, insert : item.substr(cutIndex) });
 
-					if (++count > opt.maxResults) break;
+					if (++count >= opt.maxResults) break;
 				}
 			}
-			log(libName + ': Suggestion count = ',  array.length);
+
+			log(libName + ': Suggestion count = ', array.length);
 			return array;
 		}
 
-		function getPlacement() {
-			const style = window.getComputedStyle(listbox),
-				width = parseInt(style.getPropertyValue('width')),
-				height = parseInt(style.getPropertyValue('height')),
+		function getListPlacement() {
+			const rect = listbox.getBoundingClientRect(),
+				listX = opt.listOffsetX,
+				listY = opt.listOffsetY,
+				offsetY = window.pageYOffset,
+				offsetX = window.pageXOffset,
+				right = offsetX + window.innerWidth - 20,
+				bottom = offsetY + window.innerHeight - 20;
 
-				offsetTop = window.pageYOffset,
-				offsetLeft = window.pageXOffset,
+			let top = caretRect.top + caretRect.height + offsetY,
+				left = caretRect.left + offsetX;
 
-				bottom = offsetTop + window.innerHeight - 20,
-				right = offsetLeft + window.innerWidth - 20;
+			if (left + rect.width > right) {
+				left = left - rect.width - listX;
 
-			let top = clientRect.bottom + offsetTop,
-				left = clientRect.left + offsetLeft;
+			} else left += listX;
 
-			if (left + width > right) {
-				left = left - (left + width + 20 - right);
-			}
+			if (top + rect.height > bottom) {
+				top = top - rect.height - caretRect.height - listY;
 
-			if (top + height > bottom) {
-				top = top - height - (clientRect.height + 10);
-			}
+			} else top += listY;
 
-			return { top : top + 5, left : left + 5 };
+			return { top : top, left : left };
 		}
 
-		function getClientRect(elem) {
+		function getCaretCoordinates(elem, lastIndex) {
 			const rect = elem.getBoundingClientRect(),
+				text = elem.value,
+				content = text.substring(0, lastIndex),
 				style = window.getComputedStyle(elem),
-				div = document.createElement('div');
+				div = document.createElement('div'),
+				span = document.createElement('span');
+
+			div.textContent = isInput ? content.replace(/\s/g, '\u00a0') : content;
+			span.textContent = text.charAt(lastIndex) || '.';
+			div.appendChild(span);
 			document.body.appendChild(div);
 
 			const properties = [
-				'letterSpacing',
-				'textAlign',
-				'textTransform',
+				'direction', 'boxSizing',
+				'textAlign', 'textTransform', 'textIndent',
+				'letterSpacing', 'wordSpacing',
+				'overflowX', 'overflowY',
+				'tabSize'
 			];
 
 			properties.forEach(prop => {
 				div.style[prop] = style.getPropertyValue(prop);
 			});
 
+			const props = {
+				width : style.width,
+				wordWrap : "break-word",
+				whiteSpace : "pre-wrap",
+			};
+
 			Object.assign(div.style, {
 				position : "absolute",
 				visibility : "hidden",
-				wordWrap : "break-word",
-				whiteSpace : "pre-wrap",
 				top : rect.top + "px",
 				left : rect.left + "px",
-				width : rect.width + "px",
-				height : rect.height + "px",
+				height : style.height,
+
 				font : style.font,
 				padding : style.padding,
 				border : style.border,
-				lineHeight : style.lineHeight,
-			});
+			}, ( !isInput ? props : {}));
 
-			const text = elem.value;
-			div.textContent = text.substring(0, selectionStart);
+			const height = span.getBoundingClientRect().height,
+				offsetY = isInput ? (elem.clientHeight - height) / 2 : 0,
+				top = rect.top + span.offsetTop - (elem.scrollHeight > elem.clientHeight ? elem.scrollTop : 0) + parseInt(style.borderTopWidth) + offsetY,
+				left = rect.left + span.offsetLeft - (elem.scrollWidth > elem.clientWidth ? elem.scrollLeft : 0) + parseInt(style.borderLeftWidth);
 
-			const span = document.createElement('span');
-			span.textContent = text.charAt(selectionStart) || '.';
-			div.appendChild(span);
+			document.body.removeChild(div);
 
-			const spanRect = span.getBoundingClientRect(),
-				isScrolledY = elem.scrollHeight > rect.height,
-				isScrolledX = elem.scrollLeft > rect.width,
-				height = spanRect.height,
-				top = rect.top + span.offsetTop - (isScrolledY ? elem.scrollTop : 0),
-				left = rect.left  + span.offsetLeft - (isScrolledX ? elem.scrollLeft : 0),
-				bottom = top + height;
-
-			//console.log(isScrolledY, 'elem.scrollTop=', elem.scrollTop, 'rect.top=', rect.top, 'spanRect.top=', spanRect.top, 'span.offsetTop=', span.offsetTop, 'div.scrollHeight=', div.scrollHeight );
-
-			return { top, left, bottom, height };
+			return { top, left, height };
 		}
 
 		function insert(text) {
@@ -329,7 +382,6 @@
 					index = element.selectionStart;
 
 				element.value = value.substr(0, index) + text + value.substr(index);
-				//element.value = value.substr(0, selectionStart) + text + value.substr(selectionStart);
 
 			} else {
 				text = text.replace(/[<>&"']/g, m => {
@@ -341,11 +393,16 @@
 		}
 
 		function getSelection() {
-			const root = element.getRootNode();
-			if (root.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-				try { return root.getSelection(); } catch (e) { }
-			}
+			try { return DocumentOrShadowRoot.getSelection(); } catch (e) { }
 			return window.getSelection();
+		}
+
+		function debounce(callback, duration) {
+			let id;
+			return function() {
+					clearTimeout(id);
+					id = setTimeout(function() { callback(); }, duration);
+				};
 		}
 
 		function log(msg) {

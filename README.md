@@ -1,8 +1,15 @@
 # auto-complete.js
 
-A simple vanilla JavaScript library to perform autocomplete in **contenteditable elements** or editors that are based on **contenteditable element**, e.g. `codejar.js` editor.
+A vanilla JavaScript library to perform multiple autocomplete on **input**, **textarea**, and **contenteditable** elements or editors that are based on **textarea** or **contenteditable** elements, e.g. `codejar.js` editor.
+
+## Features
+-  Pure Vanilla Javascript
+-  Zero Dependencies
+-  Simple & Lightweight
+-  Debounce Support
 
 ## Usage:
+
 ### HTML
 ``` html
 `<link href="auto-complete.css" rel="stylesheet">`
@@ -40,15 +47,20 @@ instance.reRegisterElement(selector or HTMLElement);
     
   * `caseSensitive` - a boolean value that defines string comparison (default is `false`).
   * `threshold` - a number of typed characters that trigger suggestion process (default is `1`).
+
+  * `wholeMatch` {boolean} - whether to search in the `suggestions` array for whole match (trigger characters and typed string (default is `false`).
+    Using this trick can reduce number of garage suggestions especially in large array, e.g. CSS psudo classes start with `:` character; if this is added  `:first-child`
+
   * `maxResults` - a number of items in suggestion list (default is `10`).
 
-  * `filter : (query, results) => {}` {function} - A callback on getting suggestion results
-    * `query` {object} - an object containing query information:
-      * `match` {string} - the whole match; contains trigger character(s) and typed string.
-      * `query` {string} - the typed string after trigger character(s).
-      * `offset` {number} - the length of trigger character(s); 
+  * `listTagName` - an element tag name of a suggestion list (default is `ul`).
+  * `listClass` - an element class name of a suggestion list (default is `autocomplete-list`).
+  * `listItemTagName` - an element tag name of suggestion list item (default is `li`).
+  * `listItemClass` - an element class name of suggestion list item (default is `autocomplete-item`).
+
+  * `filter : (results) => {}` {function} - A callback on getting suggestion results
     * `results` {object} - the array of objects containing suggestion information:
-      * `listItem` {string} - the original suggestion string to be added to suggestion list
+      * `value` {string} - the original suggestion string to be added to suggestion list
       * `insert` {string} - the part of original suggestion string to be inserted into an editor
     
   * `debug` {boolean} - log to the console internal messages (default is `false`).
@@ -64,7 +76,7 @@ instance.reRegisterElement(selector or HTMLElement);
 	debounce : 0,
 	threshold : 1,
 	maxResults : 10,
-	results : () = {},
+	filter : () = {},
 	debug : false,
   };
   ```
