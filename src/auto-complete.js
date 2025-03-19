@@ -30,14 +30,15 @@
 			return optimize(array);
 		}
 
-		const name = 'autocomplete',
+		const name = 'auto-complete',
 			libName = 'auto-complete.js';
 
 		let element,
 			queryRegex,
 			regexSource,
 			listbox,
-			isText,
+			listSelector,
+			isContentEditable,
 			isInput,
 			caretRect,
 			itemLength = 0,
@@ -49,8 +50,8 @@
 			//queryChars : '\\S',
 			triggerChars : '\\s$+<=>^`|~\\p{P}',
 			regex : null,
-			listTagName : 'ul',
-			listItemTagName : 'li',
+			listTag : 'ul',
+			listItemTag : 'li',
 			listClass : name + '-list',
 			listItemClass : name + '-item',
 			listOffsetX : 5,
@@ -59,18 +60,19 @@
 			wholeMatch : true,
 			debounce : 1,
 			threshold : 1,
-			maxResults : 15,
+			maxResults : 100,
 			//filter : () => {},
 			debug : false,
 		}, this.options);
-
+		
+		listSelector = `${opt.listTag}.${opt.listClass}`;
 		queryRegex = (opt.regex instanceof RegExp) ? opt.regex : regExpCreator.create(opt, libName);
 		log(libName + ': query RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
 
 		element = registerElement(this.ctx);
 		createListbox();
 		registerEvents();
-
+		
 		if (opt.optimize) {
 			opt.suggestions = optimize(opt.suggestions);
 		}
@@ -78,7 +80,7 @@
 		function registerElement(ctx) {
 			const elem = typeof ctx === 'string' ? document.querySelector(ctx || '#' + name) : ctx;
 
-			isText = ((isInput = elem instanceof HTMLInputElement) || elem instanceof HTMLTextAreaElement);
+			isContentEditable = !((isInput = elem instanceof HTMLInputElement) || elem instanceof HTMLTextAreaElement);
 
 			addEvent(elem, 'input', onInput);
 			addEvent(elem, 'blur', hide);
@@ -87,14 +89,14 @@
 		}
 
 		function createListbox() {
-			listbox = createElement(opt.listTagName, opt.listClass);
+			listbox = createElement(opt.listTag, opt.listClass);
 			document.body.appendChild(listbox);
 			addEvent(listbox, 'mousedown', (e) => e.preventDefault());
 			addEvent(listbox, 'click', listItemClick);
 		}
 
 		function listItemClick(e) {
-			insert(e.target.getAttribute('data-insert'));
+			replaceQuery(e.target.closest(opt.listItemTag));
 		}
 
 		function createElement(name, klass) {
@@ -104,11 +106,17 @@
 		}
 
 		function registerEvents() {
-			addEvent(window, 'beforeunload', (e) => { caretRect = null; });    // ???
+			addEvent(window, 'load', hideLists());    // FireFox displays all lists on load
 			addEvent(window, 'resize', hide);
 			addEvent(document, 'click', outsideClick);
 		}
 
+		function hideLists() {
+			setTimeout(function() {
+				document.querySelectorAll(listSelector).forEach(elem => { elem.style.display = 'none'; });
+			}, 20);
+		}
+		
 		function outsideClick(e) {
 			if ( !listbox.contains(e.target) && !listbox.contains(e.target)) hide();
 		}
@@ -128,6 +136,10 @@
 				itemLength = array.length;
 
 				if (itemLength) {
+					if ( !opt.startsWith && opt.sort) {
+						// sorts by the priority of query substring is more closer to the beginning of suggestion string
+						array.sort((a, b) => a.startIndex - b.startIndex);
+					}
 					show(array);
 					return;
 				}
@@ -137,23 +149,20 @@
 
 		function getQuery() {
 			caretRect = null;
-			let text;
+			let text = '';
 
-			if (isText) {
+			if (isContentEditable) {
+				text = getText();
+
+			} else {
 				const lastIndex = element.selectionStart;
 				text = element.value.substr(0, lastIndex);
 				caretRect = getCaretCoordinates(element, lastIndex);
-
-			} else {
-				text = getText();
 			}
 
 			const rm = queryRegex.exec(text);
 			if (rm) {
-				const match = opt.caseSensitive ? rm[0] : rm[0].toLowerCase(),
-					query = opt.caseSensitive ? rm[2] : rm[2].toLowerCase();
-
-				return { match : match, query : query, offset : rm[1].length }
+				return { match : rm[0], query : rm[2], offset : rm[1].length }
 			}
 
 			const len = text.length;
@@ -161,6 +170,7 @@
 			return null;
 		}
 
+		// taken from 'codejar.js' and adapted for this library
 		function getText() {
 			const rng = getSelection().getRangeAt(0),
 				range = document.createRange();
@@ -189,7 +199,7 @@
 				next();
 
 			} else if (key === 'Enter' || key === 'Tab') {
-				const selected = document.querySelector(`ul.${opt.listClass} > li.selected`);
+				const selected = document.querySelector(`${listSelector} > ${opt.listItemTag}.selected`);
 				if (selected) {
 					e.preventDefault(e);
 					selected.click();
@@ -208,7 +218,7 @@
 		}
 
 		function update() {
-			const items = document.querySelectorAll(`ul.${opt.listClass} > li.${opt.listItemClass}`);
+			const items = document.querySelectorAll(`${listSelector} > ${opt.listItemTag}`);
 
 			items.forEach((item, index) => {
 				item.classList.toggle('selected', index === selectedIndex);
@@ -223,12 +233,32 @@
 
 		function show(list) {
 			listbox.innerHTML = '';
-			listbox.style.height = '10';    // resets scrollbar
-
+			
 			list.forEach((obj, i) => {
-				const elem = createElement(opt.listItemTagName, opt.listItemClass);
-				elem.setAttribute('data-insert', obj.insert);
-				elem.textContent = obj.value;
+				const text = obj.text,
+					start = obj.startIndex,
+					end = start + obj.query.length,
+					elem = createElement(opt.listItemTag, opt.listItemClass);
+
+				elem.setAttribute('data-query', obj.query);
+				elem.setAttribute('data-text', text);
+
+				if (opt.highlight) {
+					if (start > 0) {
+						elem.textContent = text.substr(0, start);
+					}
+
+					const mark = createElement('mark');
+					mark.textContent = text.substring(start, end);
+					elem.appendChild(mark);
+
+					if (end < text.length) {
+						elem.appendChild(document.createTextNode(text.substr(end)));
+					}
+
+				} else {
+					elem.textContent = text;
+				}
 
 				listbox.appendChild(elem);
 			});
@@ -237,11 +267,13 @@
 			const rect = getListPlacement();
 			listbox.style.top = rect.top + 'px';
 			listbox.style.left = rect.left + 'px';
-			listbox.style.height = 'auto';
-			selectedIndex = 0;
+			listbox.scrollTop = 0;
+			selectedIndex = -1;
 		}
 
 		function hide() {
+			if ( !listbox) return; 
+			listbox.innerHTML = '';
 			listbox.style.display = 'none';
 		}
 
@@ -267,35 +299,47 @@
 		}
 
 		function getSuggestions(obj) {
-			const whole = opt.wholeMatch,
-				queryLen = obj.query.length,
-				matchLen = obj.match.length,
-				suggestions = Array.isArray(opt.suggestions) ? opt.suggestions : opt.suggestions[getKey(obj.query)];
+			let match = obj.match,
+				query = obj.query;
+			match = opt.caseSensitive ? match : match.toLowerCase(),
+				query = opt.caseSensitive ? query : query.toLowerCase();
 
-			let array = [],
+			const queryLen = query.length,
+				matchLen = match.length,
+				startsWith = opt.startsWith,
+				suggestions = opt.suggestions,
+				array = Array.isArray(suggestions) ? suggestions : suggestions[getKey(query)];
+
+			let results = [],
 				count = 0,
-				index, item, str;
+				text, str, index, success;
 
-			if ( !suggestions) {
+			if ( !array) {
 				log(libName + ': Suggestion array is undefined for ', obj.query);
-				return array;
+				return results;
 			}
 
-			for (let i = 0; i < suggestions.length; i++) {
-				item = suggestions[i];
-				str = opt.caseSensitive ? item : item.toLowerCase();
-				index = str.indexOf(obj.query);
+			for (let i = 0; i < array.length; i++) {
+				text = array[i];
+				str = opt.caseSensitive ? text : text.toLowerCase();
+				index = str.indexOf(query);
+				
+				if (startsWith) {
+					success = index === 0 && str.length > queryLen;
 
-				if (index === 0 && str.length > queryLen || whole && str.length > matchLen && str.indexOf(obj.match) === 0) {
-					const cutIndex = obj.match.length - (index === 0 ? obj.offset : 0);
-					array.push({ value : item, insert : item.substr(cutIndex) });
+				} else {
+					success = index > 0 || index === 0 && str.length > queryLen;
+				}
+
+				if (success) {
+					results.push({ text : text, value : str, query : query, startIndex : index });
 
 					if (++count >= opt.maxResults) break;
 				}
 			}
 
-			log(libName + ': Suggestion count = ', array.length);
-			return array;
+			log(libName + ': Suggestion count = ', results.length);
+			return results;
 		}
 
 		function getListPlacement() {
@@ -323,23 +367,25 @@
 			return { top : top, left : left };
 		}
 
+		// from https://github.com/component/textarea-caret-position; undergoes refactoring, bugs fixing and adaptation
 		function getCaretCoordinates(elem, lastIndex) {
 			const rect = elem.getBoundingClientRect(),
 				text = elem.value,
+				len = text.length,
 				content = text.substring(0, lastIndex),
 				style = window.getComputedStyle(elem),
 				div = document.createElement('div'),
 				span = document.createElement('span');
 
 			div.textContent = isInput ? content.replace(/\s/g, '\u00a0') : content;
-			span.textContent = text.charAt(lastIndex) || '.';
+			span.textContent = text.substr(lastIndex, len - lastIndex > 50 ? 50 : len) || '.';
 			div.appendChild(span);
 			document.body.appendChild(div);
 
 			const properties = [
 				'direction', 'boxSizing',
-				'textAlign', 'textTransform', 'textIndent',
-				'letterSpacing', 'wordSpacing',
+				'textAlign', 'textAlignLast', 'textTransform', 'textIndent',
+				'letterSpacing', 'wordSpacing', 'wordBreak',
 				'overflowX', 'overflowY',
 				'tabSize'
 			];
@@ -350,7 +396,7 @@
 
 			const props = {
 				width : style.width,
-				wordWrap : "break-word",
+				wordWrap : "normal",
 				whiteSpace : "pre-wrap",
 			};
 
@@ -359,8 +405,7 @@
 				visibility : "hidden",
 				top : rect.top + "px",
 				left : rect.left + "px",
-				height : style.height,
-
+				//height : style.height,
 				font : style.font,
 				padding : style.padding,
 				border : style.border,
@@ -369,27 +414,82 @@
 			const height = span.getBoundingClientRect().height,
 				offsetY = isInput ? (elem.clientHeight - height) / 2 : 0,
 				top = rect.top + span.offsetTop - (elem.scrollHeight > elem.clientHeight ? elem.scrollTop : 0) + parseInt(style.borderTopWidth) + offsetY,
-				left = rect.left + span.offsetLeft - (elem.scrollWidth > elem.clientWidth ? elem.scrollLeft : 0) + parseInt(style.borderLeftWidth);
+				left = rect.left + span.offsetLeft - (elem.scrollWidth > elem.clientWidth ? elem.scrollLeft : 0) + parseInt(style.borderLeftWidth) - 1;
 
 			document.body.removeChild(div);
 
 			return { top, left, height };
 		}
 
-		function insert(text) {
-			if (isText) {
-				const value = element.value,
-					index = element.selectionStart;
+		function replaceQuery(elem) {
+			const query = elem.getAttribute('data-query'),
+				suggestion = elem.getAttribute('data-text');
 
-				element.value = value.substr(0, index) + text + value.substr(index);
+			if ( !query) return;
 
-			} else {
-				text = text.replace(/[<>&"']/g, m => {
+			if (isContentEditable) {
+				const len = getText().length;
+
+				select(element, len - query.length, len);
+
+				const text = suggestion.replace(/[<>&"']/g, m => {
 					return m === '<' ? '&lt;' : m === '>' ? '&gt;' : m === '&' ? '&amp;' : m === '"' ? '&quot;' : '&#039;';
 				});
 				document.execCommand('insertHTML', false, text);
+
+			} else {
+				const value = element.value,
+					index = element.selectionStart,
+					queryIndex = index - query.length;
+
+				element.value = value.substr(0, queryIndex) + suggestion + value.substr(index);
+				element.selectionStart = element.selectionEnd = queryIndex + suggestion.length; // set cursor at the end of suggestion
 			}
 			hide();
+		}
+
+		// taken from 'codejar.js' and adapted for this library
+		function select(element, start, end) {
+			const selection = getSelection(),
+				stack = [];
+			let startNode,
+				endNode,
+				startOffset = 0,
+				endOffset = 0,
+				current = 0,
+				elem = element.firstChild;
+
+			while (elem) {
+				if (elem.nodeType === Node.TEXT_NODE) {
+					const len = (elem.nodeValue || '').length;
+					
+					if (current + len >= start && start >= current) {
+						if ( !startNode) {
+							startNode = elem;
+							startOffset = start - current;
+						}
+						if (current + len >= end && end >= current) {
+							endNode = elem;
+							endOffset = end - current;
+							break;
+						}
+					}
+					current += len;
+				}
+
+				if (elem.nextSibling) stack.push(elem.nextSibling);
+				if (elem.firstChild) stack.push(elem.firstChild);
+				elem = stack.pop();
+			}
+			if ( !startNode) {
+				startNode = element;
+				startOffset = element.childNodes.length;
+			}
+			if ( !endNode) {
+				endNode = element;
+				endOffset = element.childNodes.length;
+			}
+			selection.setBaseAndExtent(startNode, startOffset, endNode, endOffset);
 		}
 
 		function getSelection() {
@@ -400,9 +500,9 @@
 		function debounce(callback, duration) {
 			let id;
 			return function() {
-					clearTimeout(id);
-					id = setTimeout(function() { callback(); }, duration);
-				};
+				clearTimeout(id);
+				id = setTimeout(function() { callback(); }, duration);
+			};
 		}
 
 		function log(msg) {

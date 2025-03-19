@@ -1,5 +1,5 @@
 
-.autocomplete-list {
+.auto-complete-list {
   list-style: none;
   position: absolute;
   margin: 0;
@@ -15,7 +15,7 @@
   z-index: 100000;
 }
 
-.autocomplete-list > li {
+.auto-complete-list > li {
   margin: 5px 15px 5px 5px;
   padding: 2px 5px;
   text-align: left;
@@ -26,21 +26,21 @@
   white-space: nowrap;
 }
 
-.autocomplete-list > li:hover {
+.auto-complete-list > li:hover {
   cursor: pointer;
   background-color: #aceaea;
 }
 
-.autocomplete-list > li.selected {
+.auto-complete-list > li.selected {
   background-color: #aceaea;
 }
 
-.autocomplete-list > li.selected mark {
+.auto-complete-list > li.selected mark {
   background-color: #aceaea;
   color: #f00;
 }
 
-.autocomplete-list > li > mark {
+.auto-complete-list > li > mark {
   background-color: transparent;
   color: #f00;
 }
