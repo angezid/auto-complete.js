@@ -144,11 +144,11 @@ export default function autoComplete(ctx, options) {
 	}
 
 	function sort(array, query) {
-		query = getValue(query);
+		query = getValue(query, true);
 		// sorts by the priority of query substring is more closer to the beginning of suggestion string
 		array.sort((a, b) => a.startIndex - b.startIndex);
 
-		const index = array.findIndex(obj => obj.startIndex === 0 && query === getValue(obj.value));
+		const index = array.findIndex(obj => obj.startIndex === 0 && query === getValue(obj.value, true));
 
 		if (index > 0) {
 			const temp = array[0];
@@ -165,7 +165,18 @@ export default function autoComplete(ctx, options) {
 
 		const rm = queryRegex.exec(text);
 		if (rm) {
-			return { trigger : rm[1], query : rm[2] }
+			const groups = rm.groups;
+			let trigger, query;
+
+			if (groups && (query = groups.query)) {
+				trigger = groups.trigger;
+
+			} else if((query = rm[2])) {
+				trigger = rm[1];
+			}
+
+			log(`${libName}: trigger = '${trigger}' query = '${query}`);
+			return { trigger, query };
 		}
 
 		const len = text.length;
@@ -179,10 +190,8 @@ export default function autoComplete(ctx, options) {
 		listbox.innerHTML = '';
 
 		list.forEach((data, i) => {
-			let json = JSON.stringify(data).replaceAll('"', '&#34;');
-			let text = data.text;
+			const text = data.text;
 			const elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
-			elem.setAttribute('data-json', json);
 
 			if (opt.highlight) {
 				const start = data.startIndex,
@@ -199,6 +208,9 @@ export default function autoComplete(ctx, options) {
 			if (custom) {
 				opt.listItem(elem, data);
 			}
+
+			const json = JSON.stringify(data).replaceAll('"', '&#34;');
+			elem.setAttribute('data-json', json);
 		});
 
 		const rect = getListPlacement();
@@ -344,20 +356,21 @@ export default function autoComplete(ctx, options) {
 					index = getValue(text).indexOf(query);
 
 				if (startsWith ? index === 0 : index >= 0) {
-					results.push({ text, query : obj.query, trigger : obj.trigger, startIndex : index });
-
 					if (++count >= opt.maxResults) break;
+
+					results.push({ text, query : obj.query, trigger : obj.trigger, startIndex : index });
 				}
 			}
 		}
 
-		log(libName + ': Suggestion count = ', results.length);
+		log(libName + ': Suggestion count =', results.length);
 		return results;
 	}
 
-	function getValue(str) {
+	function getValue(str, normal) {
 		if ( !str) return '';
-		return diacritics.replace(opt.caseSensitive ? str : str.toLowerCase());
+		str = opt.caseSensitive ? str : str.toLowerCase();
+		return normal ? str : diacritics.replace(str);
 	}
 
 	function getListPlacement() {
@@ -398,10 +411,10 @@ export default function autoComplete(ctx, options) {
 
 		if (isFunction(opt.select)) {
 			text = opt.select(data);
-
-		} else if (opt.startsWith) {
-			//text = data.query + text.substr(data.query.length);
 		}
+		//else if (opt.startsWith) {
+			//text = data.query + text.substr(data.query.length);
+		//}
 
 		if (isContentEditable) {
 			contentEditable.replace(context, data.query, text);

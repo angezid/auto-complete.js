@@ -296,12 +296,12 @@
 	    hide();
 	  }
 	  function sort(array, query) {
-	    query = getValue(query);
+	    query = getValue(query, true);
 	    array.sort(function (a, b) {
 	      return a.startIndex - b.startIndex;
 	    });
 	    var index = array.findIndex(function (obj) {
-	      return obj.startIndex === 0 && query === getValue(obj.value);
+	      return obj.startIndex === 0 && query === getValue(obj.value, true);
 	    });
 	    if (index > 0) {
 	      var temp = array[0];
@@ -315,9 +315,17 @@
 	    caretCoords = obj.caretCoordinates;
 	    var rm = queryRegex.exec(text);
 	    if (rm) {
+	      var groups = rm.groups;
+	      var trigger, query;
+	      if (groups && (query = groups.query)) {
+	        trigger = groups.trigger;
+	      } else if (query = rm[2]) {
+	        trigger = rm[1];
+	      }
+	      log("".concat(libName, ": trigger = '").concat(trigger, "' query = '").concat(query));
 	      return {
-	        trigger: rm[1],
-	        query: rm[2]
+	        trigger: trigger,
+	        query: query
 	      };
 	    }
 	    var len = text.length;
@@ -328,10 +336,8 @@
 	    var custom = isFunction(opt.listItem);
 	    listbox.innerHTML = '';
 	    list.forEach(function (data, i) {
-	      var json = JSON.stringify(data).replaceAll('"', '&#34;');
 	      var text = data.text;
 	      var elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
-	      elem.setAttribute('data-json', json);
 	      if (opt.highlight) {
 	        var start = data.startIndex,
 	          end = start + data.query.length;
@@ -344,6 +350,8 @@
 	      if (custom) {
 	        opt.listItem(elem, data);
 	      }
+	      var json = JSON.stringify(data).replaceAll('"', '&#34;');
+	      elem.setAttribute('data-json', json);
 	    });
 	    var rect = getListPlacement();
 	    listbox.style.top = rect.top + 'px';
@@ -467,22 +475,23 @@
 	        var text = array[i],
 	          index = getValue(text).indexOf(query);
 	        if (startsWith ? index === 0 : index >= 0) {
+	          if (++count >= opt.maxResults) break;
 	          results.push({
 	            text: text,
 	            query: obj.query,
 	            trigger: obj.trigger,
 	            startIndex: index
 	          });
-	          if (++count >= opt.maxResults) break;
 	        }
 	      }
 	    }
-	    log(libName + ': Suggestion count = ', results.length);
+	    log(libName + ': Suggestion count =', results.length);
 	    return results;
 	  }
-	  function getValue(str) {
+	  function getValue(str, normal) {
 	    if (!str) return '';
-	    return diacritics.replace(opt.caseSensitive ? str : str.toLowerCase());
+	    str = opt.caseSensitive ? str : str.toLowerCase();
+	    return normal ? str : diacritics.replace(str);
 	  }
 	  function getListPlacement() {
 	    listbox.style.display = 'block';
@@ -513,7 +522,7 @@
 	    text = data.text;
 	    if (isFunction(opt.select)) {
 	      text = opt.select(data);
-	    } else if (opt.startsWith) ;
+	    }
 	    if (isContentEditable) {
 	      contentEditable.replace(context, data.query, text);
 	    } else {

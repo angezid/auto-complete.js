@@ -29,9 +29,8 @@ const diacritics = {
 
 export default diacritics;
 
-/*const chars = ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę',
-	'iìíỉĩịîïī', 'lł', 'nñňń', 'oòóỏõọôồốổỗộơởỡớờợöøōő', 'rř',
-	'sšśșş', 'tťțţ', 'uùúủũụưừứửữựûüůūű', 'yýỳỷỹỵÿ', 'zžżź'];
+/*const chars = ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę', 'iìíỉĩịîïī', 'lł', 'nñňń',
+	'oòóỏõọôồốổỗộơởỡớờợöøōő', 'rř', 'sšśșş', 'tťțţ', 'uùúủũụưừứửữựûüůūű', 'yýỳỷỹỵÿ', 'zžżź'];
 
 const diacritics = {};
 
@@ -47,8 +46,8 @@ chars.forEach(str => {
 
 export function replaceDiacritics(str) {
 	for (let i = 0; i < str.length; i++) {
-		if (this.obj[str[i]]) {
-			return str.split('').map(ch => this.obj[ch] || ch).join('');
+		if (diacritics[str[i]]) {
+			return str.split('').map(ch => diacritics[ch] || ch).join('');
 		}
 	}
 	return str;
