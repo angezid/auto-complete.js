@@ -1,3 +1,9 @@
+/*!*************************************************
+* auto-complete.js 1.0.0
+* https://github.com/angezid/auto-complete.js
+* MIT licensed
+* Copyright (c) 2025, angezid
+**************************************************/
 const regExpCreator = {
 	create : function(opt, libName) {
 		const queryChars = this.preprocess(opt.queryChars),

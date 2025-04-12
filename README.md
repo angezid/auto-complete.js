@@ -5,9 +5,9 @@ It design in mind to work with large arrays of suggestion, e.g. language diction
 
 ## Description
 
-When user is typing in an editable element, the library checks for the specified trigger character(s) and following (query) character(s).  
-If condition is met, it performs searching in provided suggestion array. If searching succeeds, it displays a suggestion list.  
-When desired item is clicked, the *query* part is replaced by the suggestion.  
+When user is typing in an editable element, the library checks for the specified trigger character(s) and following (query) character(s) (control by RegExp).  
+If condition is met (involve `threshold` opt.), it performs searching (affected by `maxResults` opt.) in provided suggestion array. If searching succeeds, it displays a suggestion list.  
+When desired item is clicked, the *query* part is replaced by the suggestion (can be change on `select` callback).
 
 It has the two searching mode:
 * starts with typed sequence
@@ -33,6 +33,8 @@ Thus, instead of looping through whole array, it's search for suggestions within
 
 **Important** the `auto-complete.js` should be instantiated before an editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox. 
 
+### Examples
+
 ``` js
 const instance = new autoComplete(ctx, options);
 ```
@@ -40,19 +42,19 @@ const instance = new autoComplete(ctx, options);
 Example of using the `select` callback
 ``` js
 new autoComplete('#textarea', {
-	suggestions: dictionary,
-	startsWith: true,
-	select : (data) => {
-		// way to keep original typed sequence with 'startsWith' option
-		return data.query + data.text.substr(data.query.length);
-		
-		// translates the first letter of suggestion to uppercase at the start of an editor
-		// or after '.?!' characters regardless of the 'startsWith' option
-		if (/(?:^|[.?!])\s*/.test(data.trigger)) {
-			return data.text.charAt(0).toUpperCase() + data.text.substr(1);
-		}
-		return data.text;
-	}
+    suggestions: dictionary,
+    startsWith: true,
+    select : (data) => {
+        // way to keep original typed sequence with 'startsWith' option
+        return data.query + data.text.substr(data.query.length);
+        
+        // translates the first letter of suggestion to uppercase at the start of an editor
+        // or after '.?!' characters regardless of the 'startsWith' option
+        if (/(?:^|[.?!])\s*/.test(data.trigger)) {
+            return data.text.charAt(0).toUpperCase() + data.text.substr(1);
+        }
+        return data.text;
+    }
 });
 ```
 
@@ -79,22 +81,23 @@ instance.newElement(selector or HTMLElement);
     If the first character is '^', the character set logic is switch to negation.  
     If a custom RegExp is provided, this option ignored.
   
-  * `regex` - a custom RegExp; must contain two capturing groups: the first must specify trigger characters, the second - query characters and ended by `$` character.  
+  * `regex` - a custom RegExp; must contain two capturing groups: the first must specify trigger characters, the second - query characters, and ended by `$` character.  
     It also allow to use two named capturing groups: `/(?<trigger>...)(?<query>...)$/`.  
-    A simple dot autocomplete regex: `/([.])([\w\d]+)$/`.    
-    As a trigger can any combination of characters, e.g. `/(name: *)([\p{L}]+)$/iu` triggers autocomplete only after `name:`.
+    A simple dot autocomplete regex: `/([.])([\w\d]+)$/`.  
+    As a trigger can be any combination of characters, e.g. `/(name: *)([\p{L}]+)$/iu` triggers autocomplete only after `name:`.
   
-  * `optimize` {boolean} - whether to optimize the `suggestions` array to speed up searching (default is `false`).
+  * `optimize` {boolean} - whether to optimize the `suggestions` array to speed up searching (default is `false`).  
     **Note** that it only available with `startsWith: true` option.  
     It's create start and end indexes for the first characters (depend on `threshold` option), e.g.  
     `threshold: 1` - [1,1-2,1-3], `threshold: 2` - [1-2,1-3], `threshold: 3` - [1-3], `threshold: 4` - [1-4] ...
   
-  * `startsWith` {boolean} - whether to search starts with (default is `false`).  The default searching mode is `contains typed sequence`.
+  * `startsWith` {boolean} - whether to search starts with (default is `false`). The default searching mode is `contains typed sequence`.
   * `caseSensitive` {boolean} - whether to search case sensitive (default is `false`).
   
   * `threshold` - a number of typed characters that trigger suggestion process (default is `1`).
   * `highlight` {boolean} - whether to highlight matching in suggestion list (default is `false`).
-  * `maxResults` - a number of items in suggestion list (default is `10`).
+  * `maxResults` - a number of items in suggestion list (default is `100`).  
+    **Note** that searching is stopped, when it reaches `maxResults`.
   
   * `listTag` {string} - an element tag name of suggestion list (default is `ul`).
   * `listClass` {string} - an element class name of suggestion list (default is `autocomplete-list`).
@@ -102,11 +105,12 @@ instance.newElement(selector or HTMLElement);
   * `listItemClass` {string}  - an element class name of suggestion list item (default is `autocomplete-item`).
 
   * `listOffsetY` {number} - a vertical offset of suggestion list (default is `5`).
-  * `listOffsetX` {number} - a horizontal offset of suggestion list (default is `5`).
+  * `listOffsetX` {number} - a horizontal offset of suggestion list (default is `5`).  
     The suggestion list is flipped vertically or horizontally if it do not fit the window. These options are kept offsets on flipping.
   
-  * `filter : (results) => {}` {function} - A callback on getting suggestion results; 
-    * `results` {object} - the array of objects containing suggestion information:
+  * `filter : (results) => {}` {function} - A callback on getting suggestion results;  
+    **Note** that it must return results, if a new array is created on filtering.
+    * `results` {array} - the array of objects containing suggestion information; an item is an object with these properties:
       * `text` {string} - the original suggestion string to be added to suggestion list as list item text content
       * `query` {string} - the original query string
       * `startIndex` {number} - the start index of a query substring in suggestion string
@@ -139,24 +143,24 @@ instance.newElement(selector or HTMLElement);
   const options = {
     suggestions : [],
     queryChars : '\\d\\p{L}_', // all Unicode letter, 0-9 digits and `_`
-	triggerChars : '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~`, // white spaces and punctuation characters
-	regex : `/(^|[\s!"#$%&'()*+,\-./:;<=>?@[\]\\\^`{|}~]+)([\d\p{L}_]+)$/u`,  // 
-	caseSensitive : false,
+    triggerChars : '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~`, // white spaces and punctuation
+    regex : `/(^|[\s!"#$%&'()*+,\-./:;<=>?@[\]\\\^`{|}~]+)([\d\p{L}_]+)$/u`,
+    caseSensitive : false,
 
-	listTag : 'ul',
-	listItemTag : 'li',
-	listClass : 'auto-complete-list',
-	listItemClass : 'auto-complete-item',
-	listOffsetX : 5,
-	listOffsetY : 5,
+    listTag : 'ul',
+    listItemTag : 'li',
+    listClass : 'auto-complete-list',
+    listItemClass : 'auto-complete-item',
+    listOffsetX : 5,
+    listOffsetY : 5,
 
-	debounce : 1,
-	threshold : 1,
-	maxResults : 100,
-	// filter : () = {},
-	// listItem : (elem, data) => {},
-	// select : (data) => {},
-	debug : false,
+    debounce : 1,
+    threshold : 1,
+    maxResults : 100,
+    // filter : () = {},
+    // listItem : (elem, data) => {},
+    // select : (data) => {},
+    debug : false,
   };
   ```
 

@@ -1,3 +1,9 @@
+/*!*************************************************
+* auto-complete.js 1.0.0
+* https://github.com/angezid/auto-complete.js
+* MIT licensed
+* Copyright (c) 2025, angezid
+**************************************************/
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :

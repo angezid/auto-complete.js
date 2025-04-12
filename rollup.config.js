@@ -6,11 +6,17 @@ import babel from '@rollup/plugin-babel';
 import terser from "@rollup/plugin-terser";
 
 const src = "src/auto-complete.js";
+const years = (() => {
+  const startYear = 2025,
+    year = new Date().getFullYear();
+  return year > startYear ? `${startYear}–${year}` : year;
+})();
 
 const output = {
     name: 'autoComplete',
     file: pkg.main,
     format: 'umd',
+    banner: `/*!*************************************************\n* ${pkg.name} ${pkg.version}\n* ${pkg.homepage}\n* MIT licensed\n* Copyright (c) ${years}, ${pkg.author.name}\n**************************************************/`
   },
   output_es6 = Object.assign({}, output, {
     format : 'es'
@@ -29,10 +35,10 @@ const output = {
         ['@babel/preset-env', {
           'modules': false
         }]
-      ]/*,
+      ],
       'plugins': [
-        '@babel/plugin-transform-object-assign'
-      ]*/
+        //'@babel/plugin-transform-object-assign'
+      ]
     }));
     return newPlugins;
   })(),
