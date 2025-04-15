@@ -16,7 +16,11 @@ const output = {
     name: 'autoComplete',
     file: pkg.main,
     format: 'umd',
-    banner: `/*!*************************************************\n* ${pkg.name} ${pkg.version}\n* ${pkg.homepage}\n* MIT licensed\n* Copyright (c) ${years}, ${pkg.author.name}\n**************************************************/`
+    banner: `/*!*******************************************
+* ${pkg.name} ${pkg.version}
+* ${pkg.homepage}
+* MIT licensed\n* Copyright (c) ${years}, ${pkg.author.name}
+*********************************************/`
   },
   output_es6 = Object.assign({}, output, {
     format : 'es'
@@ -37,13 +41,18 @@ const output = {
         }]
       ],
       'plugins': [
-        //'@babel/plugin-transform-object-assign'
+        '@babel/plugin-transform-object-assign'
       ]
     }));
     return newPlugins;
   })(),
   minifyPlugins = (() => {
     const newPlugins = plugins.slice();
+    newPlugins.push(terser());
+    return newPlugins;
+  })(),
+  minifyPluginsES5 = (() => {
+    const newPlugins = pluginsES5.slice();
     newPlugins.push(terser());
     return newPlugins;
   })();
@@ -78,5 +87,5 @@ export default [
   output: Object.assign({}, output, {
     file: output.file.replace('.js', '.min.js')
   }),
-  plugins: minifyPlugins
+  plugins: minifyPluginsES5
 }];

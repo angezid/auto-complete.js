@@ -234,17 +234,19 @@ export default function autoComplete(ctx, options) {
 		}
 
 		if (key === 'ArrowUp') {
-			e.preventDefault(e);
+			e.preventDefault();
 			previous();
 
 		} else if (key === 'ArrowDown') {
-			e.preventDefault(e);
+			e.preventDefault();
 			next();
 
 		} else if (key === 'Enter' || key === 'Tab') {
-			const selected = document.querySelector(`${listSelector} > ${opt.listItemTag}.selected`);
+			if (e.defaultPrevented) return;
+			
+			const selected = listbox.querySelector('.selected');
 			if (selected) {
-				e.preventDefault(e);
+				e.preventDefault();
 				selected.click();
 			}
 		}
