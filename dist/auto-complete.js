@@ -1,9 +1,9 @@
-/*!*************************************************
+/*!*******************************************
 * auto-complete.js 1.0.0
 * https://github.com/angezid/auto-complete.js
 * MIT licensed
 * Copyright (c) 2025, angezid
-**************************************************/
+*********************************************/
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -205,9 +205,9 @@
   function autoComplete(ctx, options) {
     this.ctx = ctx;
     this.options = options;
-    this.newElement = function (ctx) {
+    this.newElement = function (newCtx) {
       removeElementEvents();
-      registerElement(ctx);
+      registerElement(newCtx);
     };
     this.destroy = function (ctx) {
       removeElementEvents();
@@ -240,7 +240,7 @@
       maxResults: 100,
       debug: false
     }, this.options);
-    context = registerElement(this.ctx);
+    registerElement(this.ctx);
     if (context) {
       createListbox();
       registerEvents();
@@ -261,8 +261,8 @@
         addEvent(elem, 'input', onInput);
         addEvent(elem, 'blur', hide);
         addEvent(elem, 'keydown', navigate);
+        context = elem;
       }
-      return elem;
     }
     function createListbox() {
       listbox = createElement(document.body, opt.listTag, opt.listClass);
@@ -289,7 +289,11 @@
     function outsideClick(e) {
       if (!listbox.contains(e.target)) hide();
     }
-    function onInput() {
+    function onInput(e) {
+      if (!/^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+        hide();
+        return;
+      }
       debounce(process(), opt.debounce);
     }
     function process() {
@@ -345,7 +349,7 @@
         };
       }
       var len = text.length;
-      log(libName + ': No match. ', len > 20 ? ' ... ' + text.slice(len - 20) : text);
+      log(libName + ': No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
       return null;
     }
     function show(list) {
@@ -381,24 +385,23 @@
     }
     function navigate(e) {
       var key = e.key;
-      if (key === 'Escape') {
-        hide();
-        return;
-      }
       if (key === 'ArrowUp') {
         e.preventDefault();
         previous();
+        return;
       } else if (key === 'ArrowDown') {
         e.preventDefault();
         next();
+        return;
       } else if (key === 'Enter' || key === 'Tab') {
-        if (e.defaultPrevented) return;
         var selected = listbox.querySelector('.selected');
         if (selected) {
           e.preventDefault();
           selected.click();
+          return;
         }
       }
+      hide();
     }
     function next() {
       selectedIndex = selectedIndex >= itemsLength - 1 ? 0 : selectedIndex + 1;
@@ -540,10 +543,18 @@
       if (isFunction(opt.select)) {
         text = opt.select(data);
       }
+      if (!text) {
+        hide();
+        return;
+      }
       if (isContentEditable) {
         contentEditable.replace(context, data.query, text);
       } else {
         textarea.replace(context, data.query, text);
+      }
+      var event = opt.event;
+      if (event && event instanceof KeyboardEvent) {
+        context.dispatchEvent(event);
       }
       hide();
     }

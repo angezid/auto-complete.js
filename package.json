@@ -8,6 +8,7 @@
     "textarea",
     "input",
     "javascript",
+    "simple",
     "easy-to-use"
   ],
   "license": "MIT",
@@ -23,7 +24,8 @@
   "homepage": "https://github.com/angezid/auto-complete.js",
   "main": "dist/auto-complete.js",
   "scripts": {
-    "build": "npm run compile",
+    "copy-file": "node scripts/copy-to-demo.js",
+    "build": "npm run compile && npm run copy-file",
     "compile": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

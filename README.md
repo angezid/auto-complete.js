@@ -66,7 +66,7 @@ instance.newElement(selector or HTMLElement);
 There can be some problems adding autocomplete to existing editors, e.g.: 
 * `codejar.js` - the `auto-complete.js` should be instantiated before an editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.
 
-* `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list (can be used 'ArrowRight' and 'ArrowLeft')).
+* `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list.
 
 ## Parameters:
 * `ctx` - an HTMLElement or CSS selector string
@@ -141,7 +141,7 @@ There can be some problems adding autocomplete to existing editors, e.g.:
   
   * `event` {KeyboardEvent} - a event, that should be fired, when a suggestion is added to context element, in order to force an editor to update (default is `undefined`),
     e.g. `event : new KeyboardEvent("input", { bubbles : true })`  
-    **Note** that it's only may require for some editors (see Troubleshooting).
+    **Note** that it's only may require for some editors (see [Troubleshooting](#troubleshooting)).
   
   * `debug` {boolean} - logs to the console internal messages (default is `false`).
   

@@ -1,9 +1,9 @@
-/*!*************************************************
+/*!*******************************************
 * auto-complete.js 1.0.0
 * https://github.com/angezid/auto-complete.js
 * MIT licensed
 * Copyright (c) 2025, angezid
-**************************************************/
+*********************************************/
 const regExpCreator = {
 	create : function(opt, libName) {
 		const queryChars = this.preprocess(opt.queryChars),
@@ -175,9 +175,9 @@ const diacritics = {
 function autoComplete(ctx, options) {
 	this.ctx = ctx;
 	this.options = options;
-	this.newElement = function(ctx) {
+	this.newElement = function(newCtx) {
 		removeElementEvents();
-		registerElement(ctx);
+		registerElement(newCtx);
 	};
 	this.destroy = function(ctx) {
 		removeElementEvents();
@@ -210,7 +210,7 @@ function autoComplete(ctx, options) {
 		maxResults : 100,
 		debug : false,
 	}, this.options);
-	context = registerElement(this.ctx);
+	registerElement(this.ctx);
 	if (context) {
 		createListbox();
 		registerEvents();
@@ -231,8 +231,8 @@ function autoComplete(ctx, options) {
 			addEvent(elem, 'input', onInput);
 			addEvent(elem, 'blur', hide);
 			addEvent(elem, 'keydown', navigate);
+			context = elem;
 		}
-		return elem;
 	}
 	function createListbox() {
 		listbox = createElement(document.body, opt.listTag, opt.listClass);
@@ -255,7 +255,11 @@ function autoComplete(ctx, options) {
 	function outsideClick(e) {
 		if ( !listbox.contains(e.target)) hide();
 	}
-	function onInput() {
+	function onInput(e) {
+		if ( !/^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+			hide();
+			return;
+		}
 		debounce(process(), opt.debounce);
 	}
 	function process() {
@@ -304,7 +308,7 @@ function autoComplete(ctx, options) {
 			return { trigger, query };
 		}
 		const len = text.length;
-		log(libName + ': No match. ', len > 20 ? ' ... ' + text.slice(len - 20) : text);
+		log(libName + ': No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
 		return null;
 	}
 	function show(list) {
@@ -340,24 +344,23 @@ function autoComplete(ctx, options) {
 	}
 	function navigate(e) {
 		const key = e.key;
-		if (key === 'Escape') {
-			hide();
-			return;
-		}
 		if (key === 'ArrowUp') {
 			e.preventDefault();
 			previous();
+			return;
 		} else if (key === 'ArrowDown') {
 			e.preventDefault();
 			next();
+			return;
 		} else if (key === 'Enter' || key === 'Tab') {
-			if (e.defaultPrevented) return;
 			const selected = listbox.querySelector('.selected');
 			if (selected) {
 				e.preventDefault();
 				selected.click();
+				return;
 			}
 		}
+		hide();
 	}
 	function next() {
 		selectedIndex = selectedIndex >= itemsLength - 1 ? 0 : selectedIndex + 1;
@@ -481,10 +484,18 @@ function autoComplete(ctx, options) {
 		if (isFunction(opt.select)) {
 			text = opt.select(data);
 		}
+		if ( !text) {
+			hide();
+			return;
+		}
 		if (isContentEditable) {
 			contentEditable.replace(context, data.query, text);
 		} else {
 			textarea.replace(context, data.query, text);
+		}
+		const event = opt.event;
+		if (event && event instanceof KeyboardEvent) {
+			context.dispatchEvent(event);
 		}
 		hide();
 	}

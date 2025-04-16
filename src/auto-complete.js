@@ -11,9 +11,9 @@ export default function autoComplete(ctx, options) {
 	this.ctx = ctx;
 	this.options = options;
 
-	this.newElement = function(ctx) {
+	this.newElement = function(newCtx) {
 		removeElementEvents();
-		registerElement(ctx)
+		registerElement(newCtx)
 	}
 
 	this.destroy = function(ctx) {
@@ -58,7 +58,7 @@ export default function autoComplete(ctx, options) {
 		debug : false,
 	}, this.options);
 
-	context = registerElement(this.ctx);
+	registerElement(this.ctx);
 
 	if (context) {
 		createListbox();
@@ -84,8 +84,8 @@ export default function autoComplete(ctx, options) {
 			addEvent(elem, 'input', onInput);
 			addEvent(elem, 'blur', hide);
 			addEvent(elem, 'keydown', navigate);
+			context = elem;
 		}
-		return elem;
 	}
 
 	function createListbox() {
@@ -114,7 +114,11 @@ export default function autoComplete(ctx, options) {
 		if ( !listbox.contains(e.target)) hide();
 	}
 
-	function onInput() {
+	function onInput(e) {
+		if ( !/^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+			hide();
+			return;
+		}
 		debounce(process(), opt.debounce);
 	}
 
@@ -180,7 +184,7 @@ export default function autoComplete(ctx, options) {
 		}
 
 		const len = text.length;
-		log(libName + ': No match. ', len > 20 ? ' ... ' + text.slice(len - 20) : text);
+		log(libName + ': No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
 		return null;
 	}
 
@@ -228,28 +232,26 @@ export default function autoComplete(ctx, options) {
 	function navigate(e) {
 		const key = e.key;
 
-		if (key === 'Escape') {
-			hide();
-			return;
-		}
-
 		if (key === 'ArrowUp') {
 			e.preventDefault();
 			previous();
+			return;
 
 		} else if (key === 'ArrowDown') {
 			e.preventDefault();
 			next();
+			return;
 
-		} else if (key === 'Enter' || key === 'Tab' || key === 'ArrowRight' || key === 'ArrowLeft') {
-			if (e.defaultPrevented) return;
-			
+		} else if (key === 'Enter' || key === 'Tab') {
 			const selected = listbox.querySelector('.selected');
+
 			if (selected) {
 				e.preventDefault();
 				selected.click();
+				return;
 			}
 		}
+		hide();
 	}
 
 	function next() {
@@ -418,13 +420,18 @@ export default function autoComplete(ctx, options) {
 			//text = data.query + text.substr(data.query.length);
 		//}
 
+		if ( !text) {
+			hide();
+			return;
+		}
+
 		if (isContentEditable) {
 			contentEditable.replace(context, data.query, text);
 
 		} else {
 			textarea.replace(context, data.query, text);
 		}
-		
+
 		const event = opt.event;
 		if (event && event instanceof KeyboardEvent) {
 			context.dispatchEvent(event);
