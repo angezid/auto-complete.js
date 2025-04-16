@@ -31,8 +31,6 @@ Thus, instead of looping through whole array, it's search for suggestions within
 <script src="../auto-complete.js"></script>
 ```
 
-**Important** the `auto-complete.js` should be instantiated before an editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox. 
-
 ### Examples
 
 ``` js
@@ -41,7 +39,7 @@ const instance = new autoComplete(ctx, options);
 
 Example of using the `select` callback
 ``` js
-new autoComplete('#textarea', {
+new autoComplete(selector, {
     suggestions: dictionary,
     startsWith: true,
     select : (data) => {
@@ -57,28 +55,33 @@ new autoComplete('#textarea', {
     }
 });
 ```
-
-The library allow to change context element without creating new instance. Can be useful for dynamically creating elements.
+The library allows to change context element without creating a new instance. Can be useful for dynamically creating elements.
 ``` js
 const instance = new autoComplete(ctx, options);
 . . .
 instance.newElement(selector or HTMLElement);
 ```
 
-### Parameters:
+## Troubleshooting
+There can be some problems adding autocomplete to existing editors, e.g.: 
+* `codejar.js` - the `auto-complete.js` should be instantiated before an editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.
+
+* `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list (can be used 'ArrowRight' and 'ArrowLeft')).
+
+## Parameters:
 * `ctx` - an HTMLElement or CSS selector string
 * `options` - the object:
-  * `suggestions` - an array of suggestion strings or an object having string keys and values that are arrays of strings starting with these keys.  
-    The object can be get by creating instance with compliant `threshold` and `caseSensitive` options and calling `optimize(array)` API.  
+  * `suggestions` - an array of suggestion strings or an object that is created by `createIndexes(array)` API. 
+    The library instance should be compliant with `threshold` and `caseSensitive` option.
   
   * `triggerChars` - a string of characters that triggers suggestion list (optional).  
     Unicode class `\p{..}, \u{..}` or a special RegExp characters `\s\W\D\n\t` also can be used.  
-    If the first character is '^', the character set logic is switch to negation.  
+    If the first character is '^', the internal RegExp character set logic is switch to negation.  
     If a custom RegExp is provided, this option ignored.
   
   * `queryChars` - a string of query characters (optional);  
     Unicode class `\p{..}, \u{..}` or a special RegExp characters `\w\d\D\S` also can be used.  
-    If the first character is '^', the character set logic is switch to negation.  
+    If the first character is '^', the internal RegExp character set logic is switch to negation.  
     If a custom RegExp is provided, this option ignored.
   
   * `regex` - a custom RegExp; must contain two capturing groups: the first must specify trigger characters, the second - query characters, and ended by `$` character.  
@@ -106,7 +109,7 @@ instance.newElement(selector or HTMLElement);
 
   * `listOffsetY` {number} - a vertical offset of suggestion list (default is `5`).
   * `listOffsetX` {number} - a horizontal offset of suggestion list (default is `5`).  
-    The suggestion list is flipped vertically or horizontally if it do not fit the window. These options are kept offsets on flipping.
+    The suggestion list is flipped vertically or horizontally if it does not fit the window. These options are kept offsets on flipping.
   
   * `filter : (results) => {}` {function} - A callback on getting suggestion results;  
     **Note** that it must return results, if a new array is created on filtering.
@@ -116,14 +119,14 @@ instance.newElement(selector or HTMLElement);
       * `startIndex` {number} - the start index of a query substring in suggestion string
   
   * `sort` {boolean} - whether to sort a suggestion list by ascending order of the `startIndex` and place exact match as first item (default is `false`).  
-    It only make sense with `startsWith: false`.  
+    It only make sense with `startsWith: false` option.  
     The sorting performs after custom `filter()` callback, if any, before building the suggestion list.
   
   * `listItem : (element, data) => {}` {function} - A callback on creation of suggestion list item:  
     The highlighting is performed just before this callback, if `highlight: true`.
     * `element` {HTMLelement} - a list item element
     * `data` {object} - an object containing suggestion information:  
-      The `data` object is converted **after** this callback to JSON string and added to this `element` as the value of attribute 'data-json'.
+      The `data` object is converted **after** this callback to JSON string and added to this `element` as the value of the attribute 'data-json'.
       * `text` {string} - the original suggestion string to be added to suggestion list as list item text content
       * `query` {string} - the original query string; **do not change** the query length!
       * `trigger` {string} - the trigger string
@@ -135,6 +138,10 @@ instance.newElement(selector or HTMLElement);
       * `query` {string} - the original query string; **do not change** the query length!
       * `trigger` {string} - the trigger string
       * `startIndex` {number} - the start index of a query substring in suggestion string
+  
+  * `event` {KeyboardEvent} - a event, that should be fired, when a suggestion is added to context element, in order to force an editor to update (default is `undefined`),
+    e.g. `event : new KeyboardEvent("input", { bubbles : true })`  
+    **Note** that it's only may require for some editors (see Troubleshooting).
   
   * `debug` {boolean} - logs to the console internal messages (default is `false`).
   

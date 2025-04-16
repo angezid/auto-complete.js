@@ -241,7 +241,7 @@ export default function autoComplete(ctx, options) {
 			e.preventDefault();
 			next();
 
-		} else if (key === 'Enter' || key === 'Tab') {
+		} else if (key === 'Enter' || key === 'Tab' || key === 'ArrowRight' || key === 'ArrowLeft') {
 			if (e.defaultPrevented) return;
 			
 			const selected = listbox.querySelector('.selected');
@@ -423,6 +423,11 @@ export default function autoComplete(ctx, options) {
 
 		} else {
 			textarea.replace(context, data.query, text);
+		}
+		
+		const event = opt.event;
+		if (event && event instanceof KeyboardEvent) {
+			context.dispatchEvent(event);
 		}
 		hide();
 	}
