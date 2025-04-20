@@ -53,34 +53,36 @@
 
   var contentEditable = {
     caretCoordinates: null,
-    getText: function getText(elem) {
-      var rng = this.getSelection(elem).getRangeAt(0),
-        range = document.createRange();
-      range.selectNodeContents(elem);
-      range.setEnd(rng.startContainer, rng.startOffset);
+    getText: function getText(elem, textContent) {
+      var selection = this.getSelection(elem),
+        rng = selection.getRangeAt(0),
+        startNode = rng.startContainer,
+        startOffset = rng.startOffset;
+      var text = '';
+      if (elem.contentEditable !== 'true' || textContent) {
+        var range = document.createRange();
+        range.selectNodeContents(elem);
+        range.setEnd(startNode, startOffset);
+        text = range.toString();
+        if (textContent) return text;
+      } else {
+        selection.setBaseAndExtent(elem, 0, startNode, startOffset);
+        text = selection.toString();
+        selection.collapse(startNode, startOffset);
+      }
       var rect = rng.getBoundingClientRect();
       if (rect.x === 0 && rect.y === 0) {
-        rect = rng.startContainer.getBoundingClientRect();
+        rect = startNode.getBoundingClientRect();
       }
       this.caretCoordinates = rect;
-      return range.toString();
+      return text;
     },
     replace: function replace(elem, query, text) {
-      var len = this.getText(elem).length;
+      var len = this.getText(elem, true).length;
       this.select(elem, len - query.length, len);
-      var obj = {
-        '<': '&lt;',
-        '>': '&gt;',
-        '&': '&amp;',
-        '"': '&quot;',
-        '\'': '&#039;'
-      };
-      document.execCommand('insertHTML', false, text.replace(/[<>&"']/g, function (m) {
-        return obj[m];
-      }));
+      document.execCommand('insertText', false, text);
     },
     select: function select(elem, start, end) {
-      var selection = this.getSelection(elem);
       var startNode,
         endNode,
         startOffset = 0,
@@ -89,22 +91,20 @@
         node;
       var iterator = document.createNodeIterator(elem, NodeFilter.SHOW_TEXT);
       while (node = iterator.nextNode()) {
-        if (node.nodeValue) {
-          var current = previous + node.nodeValue.length;
-          if (!startNode && current > start) {
-            startNode = node;
-            startOffset = start - previous;
-          }
-          if (!endNode && current >= end) {
-            endNode = node;
-            endOffset = end - previous;
-            break;
-          }
-          previous = current;
+        var current = previous + node.nodeValue.length;
+        if (!startNode && current > start) {
+          startNode = node;
+          startOffset = start - previous;
         }
+        if (!endNode && current >= end) {
+          endNode = node;
+          endOffset = end - previous;
+          break;
+        }
+        previous = current;
       }
       if (startNode && endNode) {
-        selection.setBaseAndExtent(startNode, startOffset, endNode, endOffset);
+        this.getSelection(elem).setBaseAndExtent(startNode, startOffset, endNode, endOffset);
       }
     },
     getSelection: function getSelection(elem) {
