@@ -11,7 +11,7 @@ const regExpCreator = {
 		const chars = this.preprocess(opt.triggerChars),
 			triggerPattern = '(^|[' + chars + ']+)';
 		if (opt.debug) {
-			console.log(libName + ": RegExp trigger pattern - " + triggerPattern, ' query pattern - ' + queryPattern);
+			console.log(libName + ': RegExp trigger pattern - ' + triggerPattern, ' query pattern - ' + queryPattern);
 		}
 		return new RegExp(`${triggerPattern}${queryPattern}$`, 'u');
 	},
@@ -31,8 +31,8 @@ const regExpCreator = {
 };
 
 const contentEditable = {
-	caretCoordinates : null,
-	getText : function(elem, textContent) {
+	caretCoordinates: null,
+	getText: function(elem, textContent) {
 		const selection = this.getSelection(elem),
 			rng = selection.getRangeAt(0),
 			startNode = rng.startContainer,
@@ -56,12 +56,12 @@ const contentEditable = {
 		this.caretCoordinates = rect;
 		return text;
 	},
-	replace : function(elem, query, text) {
+	replace: function(elem, query, text) {
 		const len = this.getText(elem, true).length;
 		this.select(elem, len - query.length, len);
 		document.execCommand('insertText', false, text);
 	},
-	select : function(elem, start, end) {
+	select: function(elem, start, end) {
 		let startNode,
 			endNode,
 			startOffset = 0,
@@ -69,7 +69,7 @@ const contentEditable = {
 			previous = 0,
 			node;
 		const iterator = document.createNodeIterator(elem, NodeFilter.SHOW_TEXT);
-		while (node = iterator.nextNode()) {
+		while ((node = iterator.nextNode())) {
 			const current = previous + node.nodeValue.length;
 			if ( !startNode && current > start) {
 				startNode = node;
@@ -86,7 +86,7 @@ const contentEditable = {
 			this.getSelection(elem).setBaseAndExtent(startNode, startOffset, endNode, endOffset);
 		}
 	},
-	getSelection : function(elem) {
+	getSelection: function(elem) {
 		return elem.getRootNode().getSelection();
 	},
 };
@@ -100,29 +100,28 @@ function createElement(parent, name, className, content) {
 }
 
 const textarea = {
-	caretCoordinates : null,
-	getText : function(elem) {
+	caretCoordinates: null,
+	getText: function(elem) {
 		const caretIndex = elem.selectionStart,
 			text = elem.value.substr(0, caretIndex);
 		this.caretCoordinates = this.getCaretCoordinates(elem, caretIndex);
 		return text;
 	},
-	replace : function(elem, query, text) {
+	replace: function(elem, query, text) {
 		const value = elem.value,
 			index = elem.selectionStart,
 			queryIndex = index - query.length;
 		elem.value = value.substr(0, queryIndex) + text + value.substr(index);
 		elem.selectionStart = elem.selectionEnd = queryIndex + text.length;
 	},
-	getCaretCoordinates : function(elem, caretIndex) {
+	getCaretCoordinates: function(elem, caretIndex) {
 		const rect = elem.getBoundingClientRect(),
 			isInput = elem instanceof HTMLInputElement,
 			text = elem.value,
-			len = text.length,
 			content = text.substring(0, caretIndex),
 			style = window.getComputedStyle(elem),
 			div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, '\u00a0') : content),
-			span = createElement(div, 'span', null, text.substr(caretIndex, len - caretIndex > 50 ? 50 : len) || '.');
+			span = createElement(div, 'span', null, text || '.');
 		const properties = [
 			'direction', 'boxSizing',
 			'textAlign', 'textAlignLast', 'textTransform', 'textIndent',
@@ -131,21 +130,21 @@ const textarea = {
 			'tabSize'
 		];
 		properties.forEach(prop => {
-			div.style[prop] = style.getPropertyValue(prop);
+			div.style[prop] = style[prop];
 		});
 		const props = {
-			width : style.width,
-			wordWrap : "normal",
-			whiteSpace : "pre-wrap",
+			width: style.width,
+			wordWrap: 'normal',
+			whiteSpace: 'pre-wrap',
 		};
 		Object.assign(div.style, {
-			position : "absolute",
-			visibility : "hidden",
-			top : rect.top + "px",
-			left : rect.left + "px",
-			font : style.font,
-			padding : style.padding,
-			border : style.border,
+			position: 'absolute',
+			visibility: 'hidden',
+			top: rect.top + 'px',
+			left: rect.left + 'px',
+			font: style.font,
+			padding: style.padding,
+			border: style.border,
 		}, ( !isInput ? props : {}));
 		const fontSize = parseInt(style.fontSize),
 			height = fontSize + fontSize / 2,
@@ -157,9 +156,9 @@ const textarea = {
 };
 
 const diacritics = {
-	chars : ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę', 'iìíỉĩịîïī', 'lł', 'nñňń',
+	chars: ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę', 'iìíỉĩịîïī', 'lł', 'nñňń',
 		'oòóỏõọôồốổỗộơởỡớờợöøōő', 'rř', 'sšśșş', 'tťțţ', 'uùúủũụưừứửữựûüůūű', 'yýỳỷỹỵÿ', 'zžżź'],
-	obj : {},
+	obj: {},
 	init: function() {
 		this.chars.forEach(str => {
 			const low = str[0],
@@ -181,13 +180,11 @@ const diacritics = {
 };
 
 function autoComplete(ctx, options) {
-	this.ctx = ctx;
-	this.options = options;
 	this.newElement = function(newCtx) {
 		removeElementEvents();
 		registerElement(newCtx);
 	};
-	this.destroy = function(ctx) {
+	this.destroy = function() {
 		removeElementEvents();
 		removeEvents();
 	};
@@ -205,20 +202,20 @@ function autoComplete(ctx, options) {
 		itemsLength = 0,
 		selectedIndex = 0;
 	const opt = Object.assign({}, {
-		queryChars : '\\d\\p{L}_-',
-		triggerChars : '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~',
-		listTag : 'ul',
-		listItemTag : 'li',
-		listClass : name + '-list',
-		listItemClass : name + '-item',
-		listOffsetX : 5,
-		listOffsetY : 5,
-		debounce : 1,
-		threshold : 1,
-		maxResults : 100,
-		debug : false,
-	}, this.options);
-	registerElement(this.ctx);
+		queryChars: '\\d\\p{L}_-',
+		triggerChars: '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~',
+		listTag: 'ul',
+		listItemTag: 'li',
+		listClass: name + '-list',
+		listItemClass: name + '-item',
+		listOffsetX: 5,
+		listOffsetY: 5,
+		debounce: 1,
+		threshold: 1,
+		maxResults: 100,
+		debug: false,
+	}, options);
+	registerElement(ctx);
 	if (context) {
 		createListbox();
 		registerEvents();
@@ -309,7 +306,7 @@ function autoComplete(ctx, options) {
 			let trigger, query;
 			if (groups && (query = groups.query)) {
 				trigger = groups.trigger;
-			} else if((query = rm[2])) {
+			} else if ((query = rm[2])) {
 				trigger = rm[1];
 			}
 			log(`${libName}: trigger = '${trigger}' query = '${query}`);
@@ -322,7 +319,7 @@ function autoComplete(ctx, options) {
 	function show(list) {
 		const custom = isFunction(opt.listItem);
 		listbox.innerHTML = '';
-		list.forEach((data, i) => {
+		list.forEach((data) => {
 			const text = data.text;
 			const elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
 			if (opt.highlight) {
@@ -385,11 +382,11 @@ function autoComplete(ctx, options) {
 		});
 		const selectedItem = items[selectedIndex];
 		if (selectedItem) {
-			selectedItem.scrollIntoView({ block : 'nearest', behavior : 'smooth' });
+			selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		}
 	}
 	function createIndexes(array) {
-		return new Promise(function(resolve, reject) {
+		return new Promise(function(resolve) {
 			array = array.slice();
 			array.sort();
 			let i = opt.threshold;
@@ -399,7 +396,7 @@ function autoComplete(ctx, options) {
 				let start = -1, prev;
 				while (++start < array.length && !(prev = getKey(array[start], i)));
 				array.forEach(function(str, k) {
-					var key = getKey(str, i);
+					const key = getKey(str, i);
 					if (key && key !== prev) {
 						obj[prev] = add(obj[prev], start, k);
 						start = k;
@@ -413,7 +410,7 @@ function autoComplete(ctx, options) {
 				arr.unshift([start, end]);
 				return arr;
 			}
-			resolve({ array, indexes : obj });
+			resolve({ array, indexes: obj });
 		});
 	}
 	function getIndexes(str, indexes) {
@@ -453,7 +450,7 @@ function autoComplete(ctx, options) {
 					index = getValue(text).indexOf(query);
 				if (startsWith ? index === 0 : index >= 0) {
 					if (++count >= opt.maxResults) break;
-					results.push({ text, query : obj.query, trigger : obj.trigger, startIndex : index });
+					results.push({ text, query: obj.query, trigger: obj.trigger, startIndex: index });
 				}
 			}
 		}
@@ -482,7 +479,7 @@ function autoComplete(ctx, options) {
 		if (left + rect.width > right) {
 			left = left - rect.width - listX;
 		} else left += listX;
-		return { top : top, left : left };
+		return { top: top, left: left };
 	}
 	function replaceQuery(elem) {
 		let json, text;
@@ -517,7 +514,7 @@ function autoComplete(ctx, options) {
 			id = setTimeout(() => { callback(); }, duration);
 		};
 	}
-	function log(msg) {
+	function log() {
 		if (opt.debug) {
 			console.log(Array.from(arguments).join(' '));
 		}
@@ -541,7 +538,6 @@ function autoComplete(ctx, options) {
 	function remove(elem, type, fn) {
 		elem.removeEventListener(type, fn);
 	}
-	return this;
 }
 
 export { autoComplete as default };

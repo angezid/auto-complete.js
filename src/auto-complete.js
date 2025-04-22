@@ -1,29 +1,29 @@
 
-import regCreator from "../src/regExpCreator";
-import contentEditable from "../src/contentEditable";
-import textarea from "../src/textarea";
-import diacritics from "../src/diacritics";
-import { createElement } from "../src/util";
+import regCreator from '../src/regExpCreator';
+import contentEditable from '../src/contentEditable';
+import textarea from '../src/textarea';
+import diacritics from '../src/diacritics';
+import { createElement } from '../src/util';
 
 'use strict';
 
 export default function autoComplete(ctx, options) {
-	this.ctx = ctx;
-	this.options = options;
+	//this.ctx = ctx;
+	//this.options = options;
 
 	this.newElement = function(newCtx) {
 		removeElementEvents();
-		registerElement(newCtx)
-	}
+		registerElement(newCtx);
+	};
 
-	this.destroy = function(ctx) {
+	this.destroy = function() {
 		removeElementEvents();
 		removeEvents();
-	}
+	};
 
 	this.createIndexes = function(array) {
 		return createIndexes(array);
-	}
+	};
 
 	const name = 'auto-complete',
 		libName = 'auto-complete.js';
@@ -39,26 +39,26 @@ export default function autoComplete(ctx, options) {
 
 	const opt = Object.assign({}, {
 		//suggestions : [],
-		queryChars : '\\d\\p{L}_-',
-		triggerChars : '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~',
+		queryChars: '\\d\\p{L}_-',
+		triggerChars: '\\s!"#$%&\'()*+,-./:;<=>?@[]\\^`{|}~',
 		//regex : null,
-		listTag : 'ul',
-		listItemTag : 'li',
-		listClass : name + '-list',
-		listItemClass : name + '-item',
-		listOffsetX : 5,
-		listOffsetY : 5,
+		listTag: 'ul',
+		listItemTag: 'li',
+		listClass: name + '-list',
+		listItemClass: name + '-item',
+		listOffsetX: 5,
+		listOffsetY: 5,
 		//caseSensitive : false,
-		debounce : 1,
-		threshold : 1,
-		maxResults : 100,
+		debounce: 1,
+		threshold: 1,
+		maxResults: 100,
 		//filter : (array) => {},
 		//listItem : (elem, data) => {},
 		//select : (data) => {},
-		debug : false,
-	}, this.options);
+		debug: false,
+	}, options);
 
-	registerElement(this.ctx);
+	registerElement(ctx);
 
 	if (context) {
 		createListbox();
@@ -175,7 +175,7 @@ export default function autoComplete(ctx, options) {
 			if (groups && (query = groups.query)) {
 				trigger = groups.trigger;
 
-			} else if((query = rm[2])) {
+			} else if ((query = rm[2])) {
 				trigger = rm[1];
 			}
 
@@ -189,11 +189,10 @@ export default function autoComplete(ctx, options) {
 	}
 
 	function show(list) {
-		const array = [],
-			custom = isFunction(opt.listItem);
+		const custom = isFunction(opt.listItem);
 		listbox.innerHTML = '';
 
-		list.forEach((data, i) => {
+		list.forEach((data) => {
 			const text = data.text;
 			const elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
 
@@ -274,12 +273,12 @@ export default function autoComplete(ctx, options) {
 		// Ensure the selected item is visible in the list
 		const selectedItem = items[selectedIndex];
 		if (selectedItem) {
-			selectedItem.scrollIntoView({ block : 'nearest', behavior : 'smooth' });
+			selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		}
 	}
 
 	function createIndexes(array) {
-		return new Promise(function(resolve, reject) {
+		return new Promise(function(resolve) {
 			array = array.slice();
 			array.sort();
 
@@ -292,7 +291,7 @@ export default function autoComplete(ctx, options) {
 				while (++start < array.length && !(prev = getKey(array[start], i)));
 
 				array.forEach(function(str, k) {
-					var key = getKey(str, i);
+					const key = getKey(str, i);
 
 					if (key && key !== prev) {
 						obj[prev] = add(obj[prev], start, k);
@@ -309,7 +308,7 @@ export default function autoComplete(ctx, options) {
 				return arr;
 			}
 
-			resolve({ array, indexes : obj });
+			resolve({ array, indexes: obj });
 		});
 	}
 
@@ -362,7 +361,7 @@ export default function autoComplete(ctx, options) {
 				if (startsWith ? index === 0 : index >= 0) {
 					if (++count >= opt.maxResults) break;
 
-					results.push({ text, query : obj.query, trigger : obj.trigger, startIndex : index });
+					results.push({ text, query: obj.query, trigger: obj.trigger, startIndex: index });
 				}
 			}
 		}
@@ -402,7 +401,7 @@ export default function autoComplete(ctx, options) {
 
 		} else left += listX;
 
-		return { top : top, left : left };
+		return { top: top, left: left };
 	}
 
 	function replaceQuery(elem) {
@@ -416,9 +415,9 @@ export default function autoComplete(ctx, options) {
 		if (isFunction(opt.select)) {
 			text = opt.select(data);
 		}
-		//else if (opt.startsWith) {
-			//text = data.query + text.substr(data.query.length);
-		//}
+		/*else if (opt.startsWith) {
+			text = data.query + text.substr(data.query.length);
+		}*/
 
 		if ( !text) {
 			hide();
@@ -451,7 +450,7 @@ export default function autoComplete(ctx, options) {
 		};
 	}
 
-	function log(msg) {
+	function log() {
 		if (opt.debug) {
 			console.log(Array.from(arguments).join(' '));
 		}
@@ -480,28 +479,5 @@ export default function autoComplete(ctx, options) {
 	function remove(elem, type, fn) {
 		elem.removeEventListener(type, fn);
 	}
-	return this;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

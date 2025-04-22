@@ -1,8 +1,8 @@
 
 const contentEditable = {
-	caretCoordinates : null,
+	caretCoordinates: null,
 
-	getText : function(elem, textContent) {
+	getText: function(elem, textContent) {
 		const selection = this.getSelection(elem),
 			rng = selection.getRangeAt(0),
 			startNode = rng.startContainer,
@@ -34,14 +34,14 @@ const contentEditable = {
 		return text;
 	},
 
-	replace : function(elem, query, text) {
+	replace: function(elem, query, text) {
 		const len = this.getText(elem, true).length;
 
 		this.select(elem, len - query.length, len);
 		document.execCommand('insertText', false, text);
 	},
 
-	select : function(elem, start, end) {
+	select: function(elem, start, end) {
 		let startNode,
 			endNode,
 			startOffset = 0,
@@ -50,7 +50,7 @@ const contentEditable = {
 			node;
 
 		const iterator = document.createNodeIterator(elem, NodeFilter.SHOW_TEXT);
-		while (node = iterator.nextNode()) {
+		while ((node = iterator.nextNode())) {
 			const current = previous + node.nodeValue.length;
 
 			if ( !startNode && current > start) {
@@ -70,9 +70,10 @@ const contentEditable = {
 		}
 	},
 
-	getSelection : function(elem) {
+	getSelection: function(elem) {
 		return elem.getRootNode().getSelection();
 	},
 };
 
 export default contentEditable;
+

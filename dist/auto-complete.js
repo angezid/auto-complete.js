@@ -27,7 +27,7 @@
       var chars = this.preprocess(opt.triggerChars),
         triggerPattern = '(^|[' + chars + ']+)';
       if (opt.debug) {
-        console.log(libName + ": RegExp trigger pattern - " + triggerPattern, ' query pattern - ' + queryPattern);
+        console.log(libName + ': RegExp trigger pattern - ' + triggerPattern, ' query pattern - ' + queryPattern);
       }
       return new RegExp("".concat(triggerPattern).concat(queryPattern, "$"), 'u');
     },
@@ -139,25 +139,24 @@
       var rect = elem.getBoundingClientRect(),
         isInput = elem instanceof HTMLInputElement,
         text = elem.value,
-        len = text.length,
         content = text.substring(0, caretIndex),
         style = window.getComputedStyle(elem),
         div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, "\xA0") : content),
-        span = createElement(div, 'span', null, text.substr(caretIndex, len - caretIndex > 50 ? 50 : len) || '.');
+        span = createElement(div, 'span', null, text || '.');
       var properties = ['direction', 'boxSizing', 'textAlign', 'textAlignLast', 'textTransform', 'textIndent', 'letterSpacing', 'wordSpacing', 'wordBreak', 'overflowX', 'overflowY', 'tabSize'];
       properties.forEach(function (prop) {
-        div.style[prop] = style.getPropertyValue(prop);
+        div.style[prop] = style[prop];
       });
       var props = {
         width: style.width,
-        wordWrap: "normal",
-        whiteSpace: "pre-wrap"
+        wordWrap: 'normal',
+        whiteSpace: 'pre-wrap'
       };
       _extends(div.style, {
-        position: "absolute",
-        visibility: "hidden",
-        top: rect.top + "px",
-        left: rect.left + "px",
+        position: 'absolute',
+        visibility: 'hidden',
+        top: rect.top + 'px',
+        left: rect.left + 'px',
         font: style.font,
         padding: style.padding,
         border: style.border
@@ -203,13 +202,11 @@
   };
 
   function autoComplete(ctx, options) {
-    this.ctx = ctx;
-    this.options = options;
     this.newElement = function (newCtx) {
       removeElementEvents();
       registerElement(newCtx);
     };
-    this.destroy = function (ctx) {
+    this.destroy = function () {
       removeElementEvents();
       removeEvents();
     };
@@ -239,8 +236,8 @@
       threshold: 1,
       maxResults: 100,
       debug: false
-    }, this.options);
-    registerElement(this.ctx);
+    }, options);
+    registerElement(ctx);
     if (context) {
       createListbox();
       registerEvents();
@@ -355,7 +352,7 @@
     function show(list) {
       var custom = isFunction(opt.listItem);
       listbox.innerHTML = '';
-      list.forEach(function (data, i) {
+      list.forEach(function (data) {
         var text = data.text;
         var elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
         if (opt.highlight) {
@@ -425,7 +422,7 @@
       }
     }
     function createIndexes(array) {
-      return new Promise(function (resolve, reject) {
+      return new Promise(function (resolve) {
         array = array.slice();
         array.sort();
         var i = opt.threshold;
@@ -570,7 +567,7 @@
         }, duration);
       };
     }
-    function log(msg) {
+    function log() {
       if (opt.debug) {
         console.log(Array.from(arguments).join(' '));
       }
@@ -594,7 +591,6 @@
     function remove(elem, type, fn) {
       elem.removeEventListener(type, fn);
     }
-    return this;
   }
 
   return autoComplete;

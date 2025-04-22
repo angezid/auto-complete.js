@@ -1,17 +1,17 @@
 
-import { createElement } from "../src/util";
+import { createElement } from '../src/util';
 
 const textarea = {
-	caretCoordinates : null,
+	caretCoordinates: null,
 
-	getText : function(elem) {
+	getText: function(elem) {
 		const caretIndex = elem.selectionStart,
 			text = elem.value.substr(0, caretIndex);
 		this.caretCoordinates = this.getCaretCoordinates(elem, caretIndex);
 		return text;
 	},
 
-	replace : function(elem, query, text) {
+	replace: function(elem, query, text) {
 		const value = elem.value,
 			index = elem.selectionStart,
 			queryIndex = index - query.length;
@@ -22,16 +22,15 @@ const textarea = {
 	},
 
 	// from https://github.com/component/textarea-caret-position; undergoes refactoring, bugs fixing and adaptation
-	getCaretCoordinates : function(elem, caretIndex) {
+	getCaretCoordinates: function(elem, caretIndex) {
 		const rect = elem.getBoundingClientRect(),
 			isInput = elem instanceof HTMLInputElement,
 			text = elem.value,
-			len = text.length,
 			content = text.substring(0, caretIndex),
 			style = window.getComputedStyle(elem),
 
 			div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, '\u00a0') : content),
-			span = createElement(div, 'span', null, text.substr(caretIndex, len - caretIndex > 50 ? 50 : len) || '.');
+			span = createElement(div, 'span', null, text || '.');
 
 		const properties = [
 			'direction', 'boxSizing',
@@ -42,23 +41,23 @@ const textarea = {
 		];
 
 		properties.forEach(prop => {
-			div.style[prop] = style.getPropertyValue(prop);
+			div.style[prop] = style[prop];
 		});
 
 		const props = {
-			width : style.width,
-			wordWrap : "normal",
-			whiteSpace : "pre-wrap",
+			width: style.width,
+			wordWrap: 'normal',
+			whiteSpace: 'pre-wrap',
 		};
 
 		Object.assign(div.style, {
-			position : "absolute",
-			visibility : "hidden",
-			top : rect.top + "px",
-			left : rect.left + "px",
-			font : style.font,
-			padding : style.padding,
-			border : style.border,
+			position: 'absolute',
+			visibility: 'hidden',
+			top: rect.top + 'px',
+			left: rect.left + 'px',
+			font: style.font,
+			padding: style.padding,
+			border: style.border,
 		}, ( !isInput ? props : {}));
 
 		const fontSize = parseInt(style.fontSize),
@@ -73,3 +72,4 @@ const textarea = {
 };
 
 export default textarea;
+

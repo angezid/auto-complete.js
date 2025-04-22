@@ -9,4 +9,4 @@ function createElement(parent, name, className, content) {
 	return elem;
 }
 
-export { createElement }
+export { createElement };

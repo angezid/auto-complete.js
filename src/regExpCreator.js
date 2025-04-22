@@ -8,7 +8,7 @@ const regExpCreator = {
 			triggerPattern = '(^|[' + chars + ']+)';
 
 		if (opt.debug) {
-			console.log(libName + ": RegExp trigger pattern - " + triggerPattern, ' query pattern - ' + queryPattern);
+			console.log(libName + ': RegExp trigger pattern - ' + triggerPattern, ' query pattern - ' + queryPattern);
 		}
 		return new RegExp(`${triggerPattern}${queryPattern}$`, 'u');
 	},

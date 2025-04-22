@@ -24,8 +24,9 @@
   "homepage": "https://github.com/angezid/auto-complete.js",
   "main": "dist/auto-complete.js",
   "scripts": {
+    "eslint": "eslint src/",
     "copy-file": "node scripts/copy-to-demo.js",
-    "build": "npm run compile && npm run copy-file",
+    "build": "npm run eslint && npm run compile && npm run copy-file",
     "compile": "rollup -c",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -37,6 +38,7 @@
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.3.0",
+    "eslint": "^8.56.0",
     "rollup": "^2.79.2",
     "rollup-plugin-cleanup": "^3.2.1"
   }

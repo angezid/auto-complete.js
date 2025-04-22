@@ -1,22 +1,22 @@
 
 const diacritics = {
-	chars : ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę', 'iìíỉĩịîïī', 'lł', 'nñňń',
+	chars: ['aàáảãạăằắẳẵặâầấẩẫậäåāą', 'cçćč', 'dđď', 'eèéẻẽẹêềếểễệëěēę', 'iìíỉĩịîïī', 'lł', 'nñňń',
 		'oòóỏõọôồốổỗộơởỡớờợöøōő', 'rř', 'sšśșş', 'tťțţ', 'uùúủũụưừứửữựûüůūű', 'yýỳỷỹỵÿ', 'zžżź'],
-	
-	obj : {},
-	
+
+	obj: {},
+
 	init: function() {
 		this.chars.forEach(str => {
 			const low = str[0],
 				upper = str[0].toUpperCase();
-		
+
 			for (let i = 1; i < str.length; i++) {
 				this.obj[str[i]] = low;
 				this.obj[str[i].toUpperCase()] = upper;
 			}
 		});
 	},
-	
+
 	replace: function(str) {
 		for (let i = 0; i < str.length; i++) {
 			if (this.obj[str[i]]) {
@@ -52,3 +52,4 @@ export function replaceDiacritics(str) {
 	}
 	return str;
 }*/
+
