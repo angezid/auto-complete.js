@@ -48,7 +48,7 @@ new autoComplete(selector, {
         
         // translates the first letter of suggestion to uppercase at the start of an editor
         // or after '.?!' characters regardless of the 'startsWith' option
-        if (/(?:^|[.?!])\s*/.test(data.trigger)) {
+        if (/^$|[.?!]\s*$/.test(data.trigger)) {
             return data.text.charAt(0).toUpperCase() + data.text.substr(1);
         }
         return data.text;
@@ -64,16 +64,21 @@ instance.newElement(selector or HTMLElement);
 
 ## Troubleshooting
 There can be some problems adding autocomplete to existing editors, e.g.: 
-* `codejar.js` - the `auto-complete.js` should be instantiated before an editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.
+* `codejar` - the `auto-complete.js` should be instantiated before the editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.
 
 * `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list.
 
 ## Parameters:
 * `ctx` - an HTMLElement or CSS selector string
 * `options` - the object:
-  * `suggestions` - an array of suggestion strings or an object that is created by `createIndexes(array)` API. 
-    The library instance should be compliant with `threshold` and `caseSensitive` option.
-  
+  * `suggestions` - accepted:
+    1. an array of strings
+    2. an array of arrays of strings - can be used when order of appearance in suggestion list is important,  
+      e.g. the suggestions of first array will be placed at the beginning of suggestion list and so on.
+    3. an object that created by `createIndexes(array)` API in another instance (instances must have the same `threshold` and `caseSensitive` options).  
+      **Note** that instance(s) intended to work with this object should have `startsWith: true` option.  
+      See `optimize` option.
+ 
   * `triggerChars` - a string of characters that triggers suggestion list (optional).  
     Unicode class `\p{..}, \u{..}` or a special RegExp characters `\s\W\D\n\t` also can be used.  
     If the first character is '^', the internal RegExp character set logic is switch to negation.  
@@ -86,12 +91,13 @@ There can be some problems adding autocomplete to existing editors, e.g.:
   
   * `regex` - a custom RegExp; must contain two capturing groups: the first must specify trigger characters, the second - query characters, and ended by `$` character.  
     It also allow to use two named capturing groups: `/(?<trigger>...)(?<query>...)$/`.  
-    A simple dot autocomplete regex: `/([.])([\w\d]+)$/`.  
-    As a trigger can be any combination of characters, e.g. `/(name: *)([\p{L}]+)$/iu` triggers autocomplete only after `name:`.
+    A simple regex for `input` element which trigger autocomplete only at the beginning element: `/(^\s*)(\S+)$/`.  
+    A trigger can be any combination of characters, e.g. `/(name: *)([\p{L}]+)$/iu` triggers autocomplete only after `name:`.
   
   * `optimize` {boolean} - whether to optimize the `suggestions` array to speed up searching (default is `false`).  
+    It only make sense when array is really large.  
     **Note** that it only available with `startsWith: true` option.  
-    It's create start and end indexes for the first characters (depend on `threshold` option), e.g.  
+    It cloned and sorted array, then creates start and end indexes for the first characters (depend on `threshold` option), e.g.  
     `threshold: 1` - [1,1-2,1-3], `threshold: 2` - [1-2,1-3], `threshold: 3` - [1-3], `threshold: 4` - [1-4] ...
   
   * `startsWith` {boolean} - whether to search starts with (default is `false`). The default searching mode is `contains typed sequence`.
@@ -164,7 +170,7 @@ There can be some problems adding autocomplete to existing editors, e.g.:
     debounce : 1,
     threshold : 1,
     maxResults : 100,
-    // filter : () = {},
+    // filter : (array) = {},
     // listItem : (elem, data) => {},
     // select : (data) => {},
     debug : false,

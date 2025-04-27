@@ -30,7 +30,7 @@ const textarea = {
 			style = window.getComputedStyle(elem),
 
 			div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, '\u00a0') : content),
-			span = createElement(div, 'span', null, text || '.');
+			span = createElement(div, 'span', null, text.substring(caretIndex) || '.');
 
 		const properties = [
 			'direction', 'boxSizing',
@@ -46,6 +46,7 @@ const textarea = {
 
 		const props = {
 			width: style.width,
+			height: style.height,
 			wordWrap: 'normal',
 			whiteSpace: 'pre-wrap',
 		};

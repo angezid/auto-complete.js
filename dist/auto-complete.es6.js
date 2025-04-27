@@ -91,9 +91,13 @@ const contentEditable = {
 	},
 };
 
-function createElement(parent, name, className, content) {
-	let elem = document.createElement(name);
-	if (className) elem.setAttribute('class', className);
+function createElement(parent, tag, attributes, content) {
+	let elem = document.createElement(tag);
+	if (attributes) {
+		for (const name in attributes) {
+			elem.setAttribute(name, attributes[name]);
+		}
+	}
 	if (content) elem.textContent = content;
 	parent.appendChild(elem);
 	return elem;
@@ -121,7 +125,7 @@ const textarea = {
 			content = text.substring(0, caretIndex),
 			style = window.getComputedStyle(elem),
 			div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, '\u00a0') : content),
-			span = createElement(div, 'span', null, text || '.');
+			span = createElement(div, 'span', null, text.substring(caretIndex) || '.');
 		const properties = [
 			'direction', 'boxSizing',
 			'textAlign', 'textAlignLast', 'textTransform', 'textIndent',
@@ -134,6 +138,7 @@ const textarea = {
 		});
 		const props = {
 			width: style.width,
+			height: style.height,
 			wordWrap: 'normal',
 			whiteSpace: 'pre-wrap',
 		};
@@ -199,6 +204,7 @@ function autoComplete(ctx, options) {
 		listbox,
 		listSelector,
 		isContentEditable,
+		isReplaced,
 		itemsLength = 0,
 		selectedIndex = 0;
 	const opt = Object.assign({}, {
@@ -215,6 +221,7 @@ function autoComplete(ctx, options) {
 		maxResults: 100,
 		debug: false,
 	}, options);
+	const processDebounce = debounce(process, opt.debounce);
 	registerElement(ctx);
 	if (context) {
 		createListbox();
@@ -222,11 +229,11 @@ function autoComplete(ctx, options) {
 		diacritics.init();
 		listSelector = `${opt.listTag}.${opt.listClass}`;
 		queryRegex = (opt.regex instanceof RegExp) ? opt.regex : regExpCreator.create(opt, libName);
-		log(libName + ': RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
+		log('RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
 		if (opt.optimize && opt.startsWith) {
-			createIndexes(opt.suggestions).then((obj) => {
-				opt.suggestions = obj;
-			});
+			createIndexes(opt.suggestions)
+				.then(obj => { opt.suggestions = obj; })
+				.catch (err => { log('' + err); });
 		}
 	}
 	function registerElement(ctx) {
@@ -240,7 +247,7 @@ function autoComplete(ctx, options) {
 		}
 	}
 	function createListbox() {
-		listbox = createElement(document.body, opt.listTag, opt.listClass);
+		listbox = createElement(document.body, opt.listTag, { 'class': opt.listClass });
 		addEvent(listbox, 'mousedown', (e) => e.preventDefault());
 		addEvent(listbox, 'click', listItemClick);
 	}
@@ -253,7 +260,7 @@ function autoComplete(ctx, options) {
 		addEvent(document, 'click', outsideClick);
 	}
 	function hideLists() {
-		setTimeout(function() {
+		setTimeout(() => {
 			document.querySelectorAll(listSelector).forEach(elem => { elem.style.display = 'none'; });
 		}, 20);
 	}
@@ -261,11 +268,12 @@ function autoComplete(ctx, options) {
 		if ( !listbox.contains(e.target)) hide();
 	}
 	function onInput(e) {
-		if ( !/^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+		if ( !isReplaced && /^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+			processDebounce();
+		} else {
+			isReplaced = false;
 			hide();
-			return;
 		}
-		debounce(process(), opt.debounce);
 	}
 	function process() {
 		caretCoords = null;
@@ -309,11 +317,11 @@ function autoComplete(ctx, options) {
 			} else if ((query = rm[2])) {
 				trigger = rm[1];
 			}
-			log(`${libName}: trigger = '${trigger}' query = '${query}`);
+			log(`trigger = '${trigger}' query = '${query}`);
 			return { trigger, query };
 		}
 		const len = text.length;
-		log(libName + ': No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
+		log('No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
 		return null;
 	}
 	function show(list) {
@@ -321,7 +329,7 @@ function autoComplete(ctx, options) {
 		listbox.innerHTML = '';
 		list.forEach((data) => {
 			const text = data.text;
-			const elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
+			const elem = createElement(listbox, opt.listItemTag, { 'class': opt.listItemClass }, text);
 			if (opt.highlight) {
 				const start = data.startIndex,
 					end = start + data.query.length;
@@ -334,7 +342,7 @@ function autoComplete(ctx, options) {
 			if (custom) {
 				opt.listItem(elem, data);
 			}
-			const json = JSON.stringify(data).replaceAll('"', '&#34;');
+			const json = JSON.stringify(data).replace(/"/g, '&#34;');
 			elem.setAttribute('data-json', json);
 		});
 		const rect = getListPlacement();
@@ -385,32 +393,45 @@ function autoComplete(ctx, options) {
 			selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 		}
 	}
-	function createIndexes(array) {
-		return new Promise(function(resolve) {
-			array = array.slice();
-			array.sort();
-			let i = opt.threshold;
-			const obj = {},
-				num = Math.max(i + 1, 4);
-			for (i; i < num; i++) {
-				let start = -1, prev;
-				while (++start < array.length && !(prev = getKey(array[start], i)));
-				array.forEach(function(str, k) {
-					const key = getKey(str, i);
-					if (key && key !== prev) {
-						obj[prev] = add(obj[prev], start, k);
-						start = k;
-						prev = key;
-					}
+	function createIndexes(suggestions) {
+		return new Promise((resolve, reject) => {
+			if (isArrayOfStrings(suggestions)) {
+				resolve(create(suggestions));
+			} else if (isArrayOfStrings(suggestions[0])) {
+				const array = [];
+				suggestions.forEach((arr) => {
+					array.push(create(arr));
 				});
-				obj[prev] = add(obj[prev], start, array.length);
+				resolve(array);
+			} else {
+				reject('Must be an array of strings or an array of arrays of strings');
 			}
-			function add(arr, start, end) {
-				if ( !arr) arr = [];
-				arr.unshift([start, end]);
-				return arr;
+			function create(array) {
+				array = array.slice();
+				array.sort();
+				let i = opt.threshold;
+				const obj = {},
+					num = Math.max(i + 1, 4);
+				for (i; i < num; i++) {
+					let start = -1, prev;
+					while (++start < array.length && !(prev = getKey(array[start], i)));
+					array.forEach((str, k) => {
+						const key = getKey(str, i);
+						if (key && key !== prev) {
+							obj[prev] = add(obj[prev], start, k);
+							start = k;
+							prev = key;
+						}
+					});
+					obj[prev] = add(obj[prev], start, array.length);
+				}
+				function add(arr, start, end) {
+					if ( !arr) arr = [];
+					arr.unshift([start, end]);
+					return arr;
+				}
+				return { array, indexes: obj };
 			}
-			resolve({ array, indexes: obj });
 		});
 	}
 	function getIndexes(str, indexes) {
@@ -425,6 +446,9 @@ function autoComplete(ctx, options) {
 	function getKey(str, num) {
 		return str.length < num ? null : getValue(str.substr(0, num));
 	}
+	function isArrayOfStrings(obj) {
+		return Array.isArray(obj) && obj.length && typeof obj[0] === 'string';
+	}
 	function getSuggestions(obj) {
 		const results = [],
 			query = getValue(obj.query),
@@ -432,29 +456,42 @@ function autoComplete(ctx, options) {
 			suggestions = opt.suggestions;
 		let count = 0;
 		if (Array.isArray(suggestions)) {
-			collect(suggestions, 0, suggestions.length);
+			if (isArrayOfStrings(suggestions)) {
+				search(suggestions, 0, suggestions.length, 0, 0);
+			} else if (isArrayOfStrings(suggestions[0])) {
+				suggestions.forEach((arr, i) => {
+					search(arr, 0, arr.length, i, 0);
+				});
+			} else {
+				suggestions.forEach((obj, i) => {
+					processIndexes(obj, i);
+				});
+			}
 		} else {
-			const indexes = suggestions['indexes'],
+			processIndexes(suggestions, 0);
+		}
+		function processIndexes(obj, index) {
+			const indexes = obj['indexes'],
 				array = getIndexes(query, indexes);
 			if ( !array) {
-				log(libName + ': Array of indexes is undefined for ', obj.query);
-				return results;
+				log('Array of indexes is undefined for ', obj.query);
+				return;
 			}
-			array.forEach((arr) => {
-				collect(suggestions['array'], arr[0], arr[1]);
+			array.forEach((arr, i) => {
+				search(obj['array'], arr[0], arr[1], index, i);
 			});
 		}
-		function collect(array, i, length) {
+		function search(array, i, length, arrayIndex, sortIndex) {
 			for (i; i < length; i++) {
 				const text = array[i],
 					index = getValue(text).indexOf(query);
 				if (startsWith ? index === 0 : index >= 0) {
 					if (++count >= opt.maxResults) break;
-					results.push({ text, query: obj.query, trigger: obj.trigger, startIndex: index });
+					results.push({ text, query: obj.query, trigger: obj.trigger, startIndex: index, arrayIndex, sortIndex });
 				}
 			}
 		}
-		log(libName + ': Suggestion count =', results.length);
+		log('Suggestion count =', results.length);
 		return results;
 	}
 	function getValue(str, normal) {
@@ -482,9 +519,10 @@ function autoComplete(ctx, options) {
 		return { top: top, left: left };
 	}
 	function replaceQuery(elem) {
+		isReplaced = true;
 		let json, text;
 		if ( !elem || !(json = elem.getAttribute('data-json'))) return;
-		const data = JSON.parse(json.replaceAll('&#34;', '"'));
+		const data = JSON.parse(json.replace(/&#34;/g, '"'));
 		text = data.text;
 		if (isFunction(opt.select)) {
 			text = opt.select(data);
@@ -516,7 +554,7 @@ function autoComplete(ctx, options) {
 	}
 	function log() {
 		if (opt.debug) {
-			console.log(Array.from(arguments).join(' '));
+			console.log(libName + ': ' + Array.from(arguments).join(' '));
 		}
 	}
 	function removeElementEvents() {

@@ -112,9 +112,13 @@
     }
   };
 
-  function createElement(parent, name, className, content) {
-    var elem = document.createElement(name);
-    if (className) elem.setAttribute('class', className);
+  function createElement(parent, tag, attributes, content) {
+    var elem = document.createElement(tag);
+    if (attributes) {
+      for (var name in attributes) {
+        elem.setAttribute(name, attributes[name]);
+      }
+    }
     if (content) elem.textContent = content;
     parent.appendChild(elem);
     return elem;
@@ -142,13 +146,14 @@
         content = text.substring(0, caretIndex),
         style = window.getComputedStyle(elem),
         div = createElement(document.body, 'div', null, isInput ? content.replace(/\s/g, "\xA0") : content),
-        span = createElement(div, 'span', null, text || '.');
+        span = createElement(div, 'span', null, text.substring(caretIndex) || '.');
       var properties = ['direction', 'boxSizing', 'textAlign', 'textAlignLast', 'textTransform', 'textIndent', 'letterSpacing', 'wordSpacing', 'wordBreak', 'overflowX', 'overflowY', 'tabSize'];
       properties.forEach(function (prop) {
         div.style[prop] = style[prop];
       });
       var props = {
         width: style.width,
+        height: style.height,
         wordWrap: 'normal',
         whiteSpace: 'pre-wrap'
       };
@@ -221,6 +226,7 @@
       listbox,
       listSelector,
       isContentEditable,
+      isReplaced,
       itemsLength = 0,
       selectedIndex = 0;
     var opt = _extends({}, {
@@ -237,6 +243,7 @@
       maxResults: 100,
       debug: false
     }, options);
+    var processDebounce = debounce(process, opt.debounce);
     registerElement(ctx);
     if (context) {
       createListbox();
@@ -244,10 +251,12 @@
       diacritics.init();
       listSelector = "".concat(opt.listTag, ".").concat(opt.listClass);
       queryRegex = opt.regex instanceof RegExp ? opt.regex : regExpCreator.create(opt, libName);
-      log(libName + ': RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
+      log('RegExp - /' + queryRegex.source + '/' + queryRegex.flags);
       if (opt.optimize && opt.startsWith) {
         createIndexes(opt.suggestions).then(function (obj) {
           opt.suggestions = obj;
+        })["catch"](function (err) {
+          log('' + err);
         });
       }
     }
@@ -262,7 +271,9 @@
       }
     }
     function createListbox() {
-      listbox = createElement(document.body, opt.listTag, opt.listClass);
+      listbox = createElement(document.body, opt.listTag, {
+        'class': opt.listClass
+      });
       addEvent(listbox, 'mousedown', function (e) {
         return e.preventDefault();
       });
@@ -287,11 +298,12 @@
       if (!listbox.contains(e.target)) hide();
     }
     function onInput(e) {
-      if (!/^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+      if (!isReplaced && /^(?:insertText|deleteContent($|B))/.test(e.inputType)) {
+        processDebounce();
+      } else {
+        isReplaced = false;
         hide();
-        return;
       }
-      debounce(process(), opt.debounce);
     }
     function process() {
       caretCoords = null;
@@ -339,14 +351,14 @@
         } else if (query = rm[2]) {
           trigger = rm[1];
         }
-        log("".concat(libName, ": trigger = '").concat(trigger, "' query = '").concat(query));
+        log("trigger = '".concat(trigger, "' query = '").concat(query));
         return {
           trigger: trigger,
           query: query
         };
       }
       var len = text.length;
-      log(libName + ': No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
+      log('No match. ', (len > 20 ? ' ... ' + text.slice(len - 20) : text).replace(/\r?\n|\r/g, ' '));
       return null;
     }
     function show(list) {
@@ -354,7 +366,9 @@
       listbox.innerHTML = '';
       list.forEach(function (data) {
         var text = data.text;
-        var elem = createElement(listbox, opt.listItemTag, opt.listItemClass, text);
+        var elem = createElement(listbox, opt.listItemTag, {
+          'class': opt.listItemClass
+        }, text);
         if (opt.highlight) {
           var start = data.startIndex,
             end = start + data.query.length;
@@ -367,7 +381,7 @@
         if (custom) {
           opt.listItem(elem, data);
         }
-        var json = JSON.stringify(data).replaceAll('"', '&#34;');
+        var json = JSON.stringify(data).replace(/"/g, '&#34;');
         elem.setAttribute('data-json', json);
       });
       var rect = getListPlacement();
@@ -421,39 +435,52 @@
         });
       }
     }
-    function createIndexes(array) {
-      return new Promise(function (resolve) {
-        array = array.slice();
-        array.sort();
-        var i = opt.threshold;
-        var obj = {},
-          num = Math.max(i + 1, 4);
-        var _loop = function _loop() {
-          var start = -1,
-            prev;
-          while (++start < array.length && !(prev = getKey(array[start], i)));
-          array.forEach(function (str, k) {
-            var key = getKey(str, i);
-            if (key && key !== prev) {
-              obj[prev] = add(obj[prev], start, k);
-              start = k;
-              prev = key;
-            }
+    function createIndexes(suggestions) {
+      return new Promise(function (resolve, reject) {
+        if (isArrayOfStrings(suggestions)) {
+          resolve(create(suggestions));
+        } else if (isArrayOfStrings(suggestions[0])) {
+          var array = [];
+          suggestions.forEach(function (arr) {
+            array.push(create(arr));
           });
-          obj[prev] = add(obj[prev], start, array.length);
-        };
-        for (i; i < num; i++) {
-          _loop();
+          resolve(array);
+        } else {
+          reject('Must be an array of strings or an array of arrays of strings');
         }
-        function add(arr, start, end) {
-          if (!arr) arr = [];
-          arr.unshift([start, end]);
-          return arr;
+        function create(array) {
+          array = array.slice();
+          array.sort();
+          var i = opt.threshold;
+          var obj = {},
+            num = Math.max(i + 1, 4);
+          var _loop = function _loop() {
+            var start = -1,
+              prev;
+            while (++start < array.length && !(prev = getKey(array[start], i)));
+            array.forEach(function (str, k) {
+              var key = getKey(str, i);
+              if (key && key !== prev) {
+                obj[prev] = add(obj[prev], start, k);
+                start = k;
+                prev = key;
+              }
+            });
+            obj[prev] = add(obj[prev], start, array.length);
+          };
+          for (i; i < num; i++) {
+            _loop();
+          }
+          function add(arr, start, end) {
+            if (!arr) arr = [];
+            arr.unshift([start, end]);
+            return arr;
+          }
+          return {
+            array: array,
+            indexes: obj
+          };
         }
-        resolve({
-          array: array,
-          indexes: obj
-        });
       });
     }
     function getIndexes(str, indexes) {
@@ -468,6 +495,9 @@
     function getKey(str, num) {
       return str.length < num ? null : getValue(str.substr(0, num));
     }
+    function isArrayOfStrings(obj) {
+      return Array.isArray(obj) && obj.length && typeof obj[0] === 'string';
+    }
     function getSuggestions(obj) {
       var results = [],
         query = getValue(obj.query),
@@ -475,19 +505,32 @@
         suggestions = opt.suggestions;
       var count = 0;
       if (Array.isArray(suggestions)) {
-        collect(suggestions, 0, suggestions.length);
+        if (isArrayOfStrings(suggestions)) {
+          search(suggestions, 0, suggestions.length, 0, 0);
+        } else if (isArrayOfStrings(suggestions[0])) {
+          suggestions.forEach(function (arr, i) {
+            search(arr, 0, arr.length, i, 0);
+          });
+        } else {
+          suggestions.forEach(function (obj, i) {
+            processIndexes(obj, i);
+          });
+        }
       } else {
-        var indexes = suggestions['indexes'],
+        processIndexes(suggestions, 0);
+      }
+      function processIndexes(obj, index) {
+        var indexes = obj['indexes'],
           array = getIndexes(query, indexes);
         if (!array) {
-          log(libName + ': Array of indexes is undefined for ', obj.query);
-          return results;
+          log('Array of indexes is undefined for ', obj.query);
+          return;
         }
-        array.forEach(function (arr) {
-          collect(suggestions['array'], arr[0], arr[1]);
+        array.forEach(function (arr, i) {
+          search(obj['array'], arr[0], arr[1], index, i);
         });
       }
-      function collect(array, i, length) {
+      function search(array, i, length, arrayIndex, sortIndex) {
         for (i; i < length; i++) {
           var text = array[i],
             index = getValue(text).indexOf(query);
@@ -497,12 +540,14 @@
               text: text,
               query: obj.query,
               trigger: obj.trigger,
-              startIndex: index
+              startIndex: index,
+              arrayIndex: arrayIndex,
+              sortIndex: sortIndex
             });
           }
         }
       }
-      log(libName + ': Suggestion count =', results.length);
+      log('Suggestion count =', results.length);
       return results;
     }
     function getValue(str, normal) {
@@ -533,9 +578,10 @@
       };
     }
     function replaceQuery(elem) {
+      isReplaced = true;
       var json, text;
       if (!elem || !(json = elem.getAttribute('data-json'))) return;
-      var data = JSON.parse(json.replaceAll('&#34;', '"'));
+      var data = JSON.parse(json.replace(/&#34;/g, '"'));
       text = data.text;
       if (isFunction(opt.select)) {
         text = opt.select(data);
@@ -569,7 +615,7 @@
     }
     function log() {
       if (opt.debug) {
-        console.log(Array.from(arguments).join(' '));
+        console.log(libName + ': ' + Array.from(arguments).join(' '));
       }
     }
     function removeElementEvents() {

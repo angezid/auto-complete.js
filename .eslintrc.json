@@ -14,25 +14,20 @@
     "sourceType": "module"
   },
   "rules": {
-    "no-prototype-builtins": "off",
     "no-template-curly-in-string": "error",
     "array-callback-return": "error",
     "default-case": "error",
-    "no-fallthrough": "error",
-    "no-global-assign": "error",
     "no-extend-native": "error",
     "no-invalid-this": "warn",
     "eqeqeq": "warn",
     "no-alert": "error",
     "no-eval": "error",
-    "no-with": "error",
     "consistent-return": "warn",
     "arrow-spacing": "error",
     "no-undefined": "error",
     "no-var": "error",
     "no-useless-escape": "warn",
     "no-control-regex": "off",
-    "no-tabs": 0,
     "indent": [
       "error",
       "tab"
