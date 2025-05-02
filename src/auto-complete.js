@@ -182,7 +182,7 @@ export default function autoComplete(ctx, options) {
 				trigger = rm[1];
 			}
 
-			log(`trigger = '${trigger}' query = '${query}`);
+			log(`trigger = '${trigger}' query = '${query}'`);
 			return { trigger, query };
 		}
 
@@ -224,6 +224,10 @@ export default function autoComplete(ctx, options) {
 		listbox.style.left = rect.left + 'px';
 		listbox.scrollTop = 0;
 		selectedIndex = -1;
+
+		if (isFunction(opt.show)) {
+			opt.show(listbox);
+		}
 	}
 
 	function hide() {
@@ -472,7 +476,7 @@ export default function autoComplete(ctx, options) {
 		}
 
 		const event = opt.event;
-		if (event && event instanceof KeyboardEvent) {
+		if (event && (event instanceof KeyboardEvent || event instanceof InputEvent)) {
 			context.dispatchEvent(event);
 		}
 		hide();

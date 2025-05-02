@@ -1,0 +1,20 @@
+﻿
+/*Highlight.js modified*/
+.hljs-comment { color: #008000; }
+.hljs-punctuation { font-weight: bold; color: #444; }
+.hljs-tag { color: #000; }
+.hljs-tag .hljs-name { color: #00796e; }
+.hljs-tag .hljs-attr { color: #5829ff; }
+.hljs-string { color: #a33b00; }
+.hljs-keyword { color: #0044ff; }
+.hljs-number { color: #000; }
+.hljs-deletion, .hljs-quote, .hljs-selector-class, .hljs-selector-id, .hljs-template-tag, .hljs-type { color: #800; }
+.hljs-section, .hljs-title { color: #006c8d; }
+.hljs-regexp { color: #f000f0; }
+.hljs-link, .hljs-operator, .hljs-selector-attr, .hljs-selector-pseudo, .hljs-symbol, .hljs-template-variable, .hljs-variable { color: #00a0a8; }
+.hljs-literal { color: #0087ff; }
+.hljs-addition, .hljs-built_in, .hljs-bullet, .hljs-code { color: #397300; }
+.hljs-meta { color: #1f7199; }
+.hljs-meta .hljs-string { color: #f00000; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }

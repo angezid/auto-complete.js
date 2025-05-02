@@ -317,7 +317,7 @@ function autoComplete(ctx, options) {
 			} else if ((query = rm[2])) {
 				trigger = rm[1];
 			}
-			log(`trigger = '${trigger}' query = '${query}`);
+			log(`trigger = '${trigger}' query = '${query}'`);
 			return { trigger, query };
 		}
 		const len = text.length;
@@ -350,6 +350,9 @@ function autoComplete(ctx, options) {
 		listbox.style.left = rect.left + 'px';
 		listbox.scrollTop = 0;
 		selectedIndex = -1;
+		if (isFunction(opt.show)) {
+			opt.show(listbox);
+		}
 	}
 	function hide() {
 		listbox.innerHTML = '';
@@ -537,7 +540,7 @@ function autoComplete(ctx, options) {
 			textarea.replace(context, data.query, text);
 		}
 		const event = opt.event;
-		if (event && event instanceof KeyboardEvent) {
+		if (event && (event instanceof KeyboardEvent || event instanceof InputEvent)) {
 			context.dispatchEvent(event);
 		}
 		hide();
