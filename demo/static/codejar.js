@@ -1,6 +1,4 @@
 /*!*******************************************
-* @angezid/codejar.js 1.0.0
-* https://github.com/angezid/codejar.js
 * Modified version of https://github.com/antonmedv/codejar
 * MIT licensed
 *********************************************/
@@ -39,8 +37,7 @@
       recording = false,
       focus = false,
       update = function update() {};
-    editor.setAttribute('contenteditable', 'true');
-    //editor.setAttribute('contenteditable', 'plaintext-only');
+    editor.setAttribute('contenteditable', 'plaintext-only');
     editor.setAttribute('spellcheck', opt.spellcheck);
     _extends(editor.style, {
       outline: "none",
@@ -48,6 +45,10 @@
       overflowY: "auto",
       whiteSpace: "pre-wrap"
     });
+
+    var richText = editor.contentEditable !== 'plaintext-only';
+    if (richText) editor.setAttribute('contenteditable', 'true');
+
     var highlight = function highlight(pos) {
       if (highlighter && typeof highlighter === 'function') {
         highlighter(editor, pos);
@@ -80,7 +81,7 @@
         return;
       }
       if (event.key === 'Enter') {
-        if (opt.preserveIndent) handleNewLine(event);else fixNewLine(event);
+        if (opt.preserveIndent) handleNewLine(event);else if (richText) fixNewLine(event);
       }
       if (opt.catchTab && event.key === 'Tab') handleTabCharacters(event);
       if (opt.addClosing) handleSelfClosingCharacters(event);
@@ -509,30 +510,13 @@
       return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z';
     }
     function insert(text) {
-      var obj = {
-        '<': '&lt;',
-        '>': '&gt;',
-        '&': '&amp;',
-        '"': '&quot;',
-        '\'': '&#039;'
-      };
-      document.execCommand('insertHTML', false, text.replace(/[<>&"']/g, function (m) {
-        return obj[m];
-      }));
+      var asHtml = elem.contentEditable === 'true' || !/firefox/i.test(window.navigator.userAgent);
+      if (asHtml) {
+		  var obj = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', '\'': '&#039;' };
+		  text = text.replace(/[<>&"']/g, function (m) { return obj[m]; });
+      }
+      document.execCommand(asHtml ? 'insertHTML' : 'insertText', false, text);
     }
-    /*function insert(text) {
-      var obj = {
-        '\n': '<br>',
-        '<': '&lt;',
-        '>': '&gt;',
-        '&': '&amp;',
-        '"': '&quot;',
-        '\'': '&#039;'
-      };
-      document.execCommand('insertHTML', false, text.replace(/[\n<>&"']/g, function (m) {
-        return obj[m];
-      }));
-    }*/
     function debounce(cb, wait) {
       var id;
       return function (args) {

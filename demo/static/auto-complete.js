@@ -79,8 +79,21 @@
     },
     replace: function replace(elem, query, text) {
       var len = this.getText(elem, true).length;
+      var asHtml = elem.contentEditable === 'true' || !/firefox/i.test(navigator.userAgent);
+      if (asHtml) {
+        var obj = {
+          '<': '&lt;',
+          '>': '&gt;',
+          '&': '&amp;',
+          '"': '&quot;',
+          '\'': '&#039;'
+        };
+        text = text.replace(/[<>&"']/g, function (m) {
+          return obj[m];
+        });
+      }
       this.select(elem, len - query.length, len);
-      document.execCommand('insertText', false, text);
+      document.execCommand(asHtml ? 'insertHTML' : 'insertText', false, text);
     },
     select: function select(elem, start, end) {
       var startNode,
@@ -389,8 +402,8 @@
       listbox.style.left = rect.left + 'px';
       listbox.scrollTop = 0;
       selectedIndex = -1;
-      if (isFunction(opt.show)) {
-        opt.show(listbox);
+      if (isFunction(opt.open)) {
+        opt.open(listbox);
       }
     }
     function hide() {

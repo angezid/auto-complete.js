@@ -225,8 +225,8 @@ export default function autoComplete(ctx, options) {
 		listbox.scrollTop = 0;
 		selectedIndex = -1;
 
-		if (isFunction(opt.show)) {
-			opt.show(listbox);
+		if (isFunction(opt.open)) {
+			opt.open(listbox);
 		}
 	}
 

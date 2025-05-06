@@ -58,8 +58,13 @@ const contentEditable = {
 	},
 	replace: function(elem, query, text) {
 		const len = this.getText(elem, true).length;
+		const asHtml = elem.contentEditable === 'true' || !/firefox/i.test(navigator.userAgent);
+		if (asHtml) {
+			const obj = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', '\'': '&#039;' };
+			text = text.replace(/[<>&"']/g, m => obj[m]);
+		}
 		this.select(elem, len - query.length, len);
-		document.execCommand('insertText', false, text);
+		document.execCommand(asHtml ? 'insertHTML' : 'insertText', false, text);
 	},
 	select: function(elem, start, end) {
 		let startNode,
@@ -350,8 +355,8 @@ function autoComplete(ctx, options) {
 		listbox.style.left = rect.left + 'px';
 		listbox.scrollTop = 0;
 		selectedIndex = -1;
-		if (isFunction(opt.show)) {
-			opt.show(listbox);
+		if (isFunction(opt.open)) {
+			opt.open(listbox);
 		}
 	}
 	function hide() {

@@ -12,15 +12,15 @@
 	.github { margin: 3px 100px 0 0; float: right; }
 	a.github-link svg { width: 24px; }
 	main { margin: 20px 100px 40vh 100px; }
-	
+
 	section {	display: flex; margin: 0; }
 	.flex { flex: 1; margin: 20px 0; }
 	section .flex:first-child {	margin-right: 40px;	}
 	section .flex:last-child { margin-left: 40px; }
-	.flex.border { visibility: hidden; }
-	
+	.flex.hide { visibility: hidden; }
+
 	.description { height: 50px; }
-	
+
 	.editor {
 		width: 100%;
 		height: 240px;
@@ -29,10 +29,10 @@
 		border: 1px solid #ccc;
 		overflow: auto;
 	}
-	
+
 	#textarea-border { height: 200px; width: 90%; border: 20px solid #ccc; }
-	
-	#input {
+
+	#input, #input2 {
 		width: 80%;
 		font-size: 1em;
 		height: 20px;
@@ -40,7 +40,7 @@
 		border: 1px solid #ccc;
 		border-radius: 20px;
 	}
-	
+
 	#input-border {
 		width: 80%;
 		font-size: 1.8em;
@@ -49,9 +49,9 @@
 		border: 20px solid #ccc;
 		border-radius: 60px;
 	}
-	
+
 	textarea { height: 300px; }
-	
+
 </style>
 </head>
 
@@ -63,56 +63,57 @@
 <main>
 <article id="article">
 	<h1>Autocomplete demo</h1>
-	
-	<p>English words dictionary</p>
-	
+
+	<p>This demo uses the English dictionary containing about 140000 words.</p>
+	<p>It is split into three parts: the first two parts contain the most frequently used words - their words will appear first in the suggestion list.</p>
+
 	<div class="description">
 		<div class="content">
 			<p></p>
 		</div>
 	</div>
-	
+
 	<section>
 		<div class="flex">
-			<h3>Input element; single autocomplete</h3>
+			<h4>Input element; <small>single autocomplete</small></h4>
 			<input id="input" type="text" tabindex="1">
 		</div>
-		<div class="flex border">
-			<h3>Input element with height and border style</h3>
-			<input id="input-border" type="text" tabindex="1">
+		<div class="flex">
+			<h4>Input element; <small>multiple autocomplete</h4>
+			<input id="input2" type="text" tabindex="1">
 		</div>
 	</section>
-	
+
 	<section>
 		<div class="flex">
 			<h4>TextArea element</h4>
 			<textarea id="textarea" class="editor" autocomplete=true spellcheck=false ></textarea>
 		</div>
-		<div class="flex border">
+		<div class="flex hide">
 			<h4>TextArea element with border style</h4>
 			<textarea id="textarea-border" class="editor" spellcheck=false ></textarea>
 		</div>
 	</section>
-	
+
 	<section>
 		<div class="flex">
 			<h4>Contenteditable element</h4>
 			<div id="contenteditable" class="editor" contenteditable spellcheck=false></div>
 		</div>
 		<div class="flex">
-			<h4>Contenteditable element 'plaintext-only'</h4>
+			<h4>Contenteditable element <small>'plaintext-only' state</small></h4>
 			<div id="contenteditable-plaintext" class="editor" contenteditable='plaintext-only' spellcheck=false></div>
 		</div>
 	</section>
-	
+
 	<section>
 		<div class="flex">
+			<h4>codejar editor; <small>JavaScript autocomplete</small></h4>
+			<div id="codejar2" class="editor language-js" spellcheck=false></div>
+		</div>
+		<div class="flex hide">
 			<h4>codejar editor</h4>
 			<div id="codejar" class="editor" spellcheck=false></div>
-		</div>
-		<div class="flex">
-			<h4>codejar editor <small>JavaScript autocomplete</small></h4>
-			<div id="codejar2" class="editor language-js" spellcheck=false></div>
 		</div>
 	</section>
 
@@ -151,59 +152,57 @@ function setOptions(opt) {
 setOptions();
 
 function reset() {
-	
+
 	new autoComplete('#input', {
 		regex: /(^\s*)(\S+)$/,
 		debounce: 10,
 		...options
 	});
-	
-	new autoComplete('#input-border', {
+
+	new autoComplete('#input2', {
 		maxResults: 50,
 		...options
 	});
-	
+
 	new autoComplete('#textarea', {
 		select: (data) => {
 			const ch = data.text.charAt(0);
-			
+
 			if (/^$|[.?!]\s*$/.test(data.trigger)) {
 				return ch.toUpperCase() + data.text.substr(1);
 			}
-			
+
 			if (ch === ch.toUpperCase()) return data.text;
-			
+
 			return data.query + data.text.substr(data.query.length);
 		},
 		...options
 	});
-	
+
 	new autoComplete('#textarea-border', {
-		triggerChars: '^\\w\\d',
-		queryChars: '\\w\\d',
-		listClass: 'auto-complete-list',
+		...options
 	});
-	
+
 }
-			
+
 
 //const instance = new autoComplete(null, { startsWith: true, threshold: 2 });
 const instance = new autoComplete();
 instance.createIndexes(dictionary)
 	.then(obj => {
-		createAutoCompletes(obj); 
+		createAutoCompletes(obj);
 	})
 	.catch (err => { console.log(err); });
 
 function createAutoCompletes(indexedObj) {
-	
+
 	new autoComplete('#contenteditable', {
 		suggestions: indexedObj,
 		highlight: true,
 		startsWith: true,
 		//debug: true
 	});
-	
+
 	new autoComplete('#contenteditable-plaintext', {
 		suggestions: indexedObj,
 		maxResults: 150,
@@ -211,7 +210,7 @@ function createAutoCompletes(indexedObj) {
 		highlight: true,
 		//debug: true
 	});
-	
+
 	new autoComplete('#codejar', {
 		suggestions: indexedObj,
 		startsWith: true,
@@ -220,24 +219,25 @@ function createAutoCompletes(indexedObj) {
 	});
 }
 
-const jsWords = [jsKeyWords, jsObject, jsBuiltIn];
+CodeJar(document.getElementById('codejar'), null, { tab: '\t' });
 
+const tab = '  ';
 const autoElement = new autoComplete('#codejar2', {
-	suggestions: jsWords,
+	suggestions: [jsKeyWords, jsObject, jsBuiltIn],
 	startsWith: true,
 	//caseSensitive: true,
 	highlight: true,
 	select: (data) => {
-		return (/\n/.test(data.text) ? data.text.replace(/ {4}/g,'  ') : data.text);
+		// normalizes spaces in compliance with editor
+		return data.text.replace(/ {4}/g, tab);
 	},
-	debounce: 10,
+	// forces the editor to trigger code highlighting on inserting suggestion
+	event : new KeyboardEvent("keyup"),
 	debug:true
 });
 
-CodeJar(document.getElementById('codejar'), null, { tab: '\t' });
-
 const elem = document.getElementById('codejar2');
-CodeJar(elem, highlight, { tab: '  ' });
+CodeJar(elem, highlight, { tab: tab });
 
 function highlight() {
 	hljs.configure({ ignoreUnescapedHTML: true });

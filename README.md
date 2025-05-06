@@ -42,7 +42,7 @@ Example of using the `select` callback
 new autoComplete(selector, {
     suggestions: dictionary,
     startsWith: true,
-    select : (data) => {
+    select: (data) => {
         // way to keep original typed sequence with 'startsWith' option
         return data.query + data.text.substr(data.query.length);
         
@@ -64,7 +64,8 @@ instance.newElement(selector or HTMLElement);
 
 ## Troubleshooting
 There can be some problems adding autocomplete to existing editors, e.g.: 
-* `codejar` - the `auto-complete.js` should be instantiated before the editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.
+* `codejar` - the `auto-complete.js` should be instantiated before the editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.  
+  See demo.
 
 * `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list.
 
@@ -117,7 +118,7 @@ There can be some problems adding autocomplete to existing editors, e.g.:
   * `listOffsetX` {number} - a horizontal offset of suggestion list (default is `5`).  
     The suggestion list is flipped vertically or horizontally if it does not fit the window. These options are kept offsets on flipping.
   
-  * `filter : (results) => {}` {function} - A callback on getting suggestion results;  
+  * `filter: (results) => {}` {function} - A callback on getting suggestion results;  
     **Note** that it must return results, if a new array is created on filtering.
     * `results` {array} - the array of objects containing suggestion information; an item is an object with these properties:
       * `text` {string} - the original suggestion string to be added to suggestion list as list item text content
@@ -128,7 +129,7 @@ There can be some problems adding autocomplete to existing editors, e.g.:
     It only make sense with `startsWith: false` option.  
     The sorting performs after custom `filter()` callback, if any, before building the suggestion list.
   
-  * `listItem : (element, data) => {}` {function} - A callback on creation of suggestion list item:  
+  * `listItem: (element, data) => {}` {function} - A callback on creation of suggestion list item:  
     The highlighting is performed just before this callback, if `highlight: true`.
     * `element` {HTMLelement} - a list item element
     * `data` {object} - an object containing suggestion information:  
@@ -137,16 +138,19 @@ There can be some problems adding autocomplete to existing editors, e.g.:
       * `query` {string} - the original query string; **do not change** the query length!
       * `trigger` {string} - the trigger string
       * `startIndex` {number} - the start index of a query substring in suggestion string
+      
+  * `open: (list) => {}` {function} - A callback on showing a suggestion list:  
+    * `list` {HTMLelement} - a list element 
     
-  * `select : (data) => {}` {function} - A callback on selecting list item; **must return a string**: 
+  * `select: (data) => {}` {function} - A callback on selecting list item; **must return a string**: 
     * `data` {object} - an object containing suggestion information:
       * `text` {string} - the original suggestion string
       * `query` {string} - the original query string; **do not change** the query length!
       * `trigger` {string} - the trigger string
       * `startIndex` {number} - the start index of a query substring in suggestion string
-  
-  * `event` {KeyboardEvent} - a event, that should be fired, when a suggestion is added to context element, in order to force an editor to update (default is `undefined`),
-    e.g. `event : new KeyboardEvent("input", { bubbles : true })`  
+      
+  * `event` {KeyboardEvent|InputEvent} - a event, that should be fired, when a suggestion is added to context element, in order to force an editor to update (default is `undefined`),
+    e.g. `event: new InputEvent("input")`, `event: new KeyboardEvent("keyup")`...
     **Note** that it's only may require for some editors (see [Troubleshooting](#troubleshooting)).
   
   * `debug` {boolean} - logs to the console internal messages (default is `false`).
