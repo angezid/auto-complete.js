@@ -64,10 +64,13 @@ instance.newElement(selector or HTMLElement);
 
 ## Troubleshooting
 There can be some problems adding autocomplete to existing editors, e.g.: 
-* `codejar` - the `auto-complete.js` should be instantiated before the editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in FireFox.  
+* `codejar` - the `auto-complete.js` should be instantiated before the editor. Otherwise, there will be a problem with `Enter` and `Tab` keys in Firefox.  
   See demo.
 
 * `codeflask` - as it dynamically creates a `textarea` element, so there is no possibility to instantiate `auto-complete.js` first. In addition it requires to fire some `KeyboardEvent` to update text changes in overlay `pre` element (see `event` option). `Enter` and `Tab` keys won't work on suggestion list.
+
+## Known issues
+Firefox have a bug in contenteditable element that has `plaintext-only` state. It appeared when autocomplete is performed at the beginning of a line - a suggestion is inserted at the end of previous line (`<br>` element is disappeared on replacing query).
 
 ## Parameters:
 * `ctx` - an HTMLElement or CSS selector string
@@ -77,7 +80,7 @@ There can be some problems adding autocomplete to existing editors, e.g.:
     2. an array of arrays of strings - can be used when order of appearance in suggestion list is important,  
       e.g. the suggestions of first array will be placed at the beginning of suggestion list and so on.
     3. an object that created by `createIndexes(array)` API in another instance (instances must have the same `threshold` and `caseSensitive` options).  
-      **Note** that instance(s) intended to work with this object should have `startsWith: true` option.  
+      **Note** that instance(s) intended to work with this object must also have `startsWith: true` option.  
       See `optimize` option.
  
   * `triggerChars` - a string of characters that triggers suggestion list (optional).  

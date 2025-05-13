@@ -185,14 +185,21 @@ function reset() {
 
 }
 
+createIndexedObject();
 
-//const instance = new autoComplete(null, { startsWith: true, threshold: 2 });
-const instance = new autoComplete();
-instance.createIndexes(dictionary)
-	.then(obj => {
+async function createIndexedObject() {
+	//const instance = new autoComplete(null, { threshold: 2 });
+	const instance = new autoComplete();
+	const obj = await instance.createIndexes(dictionary);
+	createAutoCompletes(obj);
+}
+
+/*const instance = new autoComplete();
+	instance.createIndexes(dictionary)
+	.then (obj => {
 		createAutoCompletes(obj);
 	})
-	.catch (err => { console.log(err); });
+	.catch (err => { console.log(err); });*/
 
 function createAutoCompletes(indexedObj) {
 

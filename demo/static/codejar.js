@@ -81,7 +81,8 @@
         return;
       }
       if (event.key === 'Enter') {
-        if (opt.preserveIndent) handleNewLine(event);else if (richText) fixNewLine(event);
+        if (opt.preserveIndent) handleNewLine(event);
+        else if (richText) fixNewLine(event);
       }
       if (opt.catchTab && event.key === 'Tab') handleTabCharacters(event);
       if (opt.addClosing) handleSelfClosingCharacters(event);

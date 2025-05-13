@@ -54,12 +54,16 @@
   var contentEditable = {
     caretCoordinates: null,
     getText: function getText(elem, textContent) {
-      var selection = this.getSelection(elem),
-        rng = selection.getRangeAt(0),
-        startNode = rng.startContainer,
+      var selection = this.getSelection(elem);
+      var text = '',
+        rng;
+      if (!selection.rangeCount || (rng = selection.getRangeAt(0)).startContainer === elem) {
+        this.caretCoordinates = elem.getBoundingClientRect();
+        return elem.textContent;
+      }
+      var startNode = rng.startContainer,
         startOffset = rng.startOffset;
-      var text = '';
-      if (elem.contentEditable !== 'true' || textContent) {
+      if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFireFox) {
         var range = document.createRange();
         range.selectNodeContents(elem);
         range.setEnd(startNode, startOffset);
@@ -79,7 +83,7 @@
     },
     replace: function replace(elem, query, text) {
       var len = this.getText(elem, true).length;
-      var asHtml = elem.contentEditable === 'true' || !/firefox/i.test(navigator.userAgent);
+      var asHtml = elem.contentEditable === 'true' || !this.isFireFox;
       if (asHtml) {
         var obj = {
           '<': '&lt;',
@@ -122,6 +126,9 @@
     },
     getSelection: function getSelection(elem) {
       return elem.getRootNode().getSelection();
+    },
+    isFireFox: function isFireFox() {
+      return /firefox/i.test(navigator.userAgent);
     }
   };
 

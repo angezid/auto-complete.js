@@ -33,12 +33,16 @@ const regExpCreator = {
 const contentEditable = {
 	caretCoordinates: null,
 	getText: function(elem, textContent) {
-		const selection = this.getSelection(elem),
-			rng = selection.getRangeAt(0),
-			startNode = rng.startContainer,
+		const selection = this.getSelection(elem);
+		let text = '',
+			rng;
+		if ( !selection.rangeCount || (rng = selection.getRangeAt(0)).startContainer === elem) {
+			this.caretCoordinates = elem.getBoundingClientRect();
+			return elem.textContent;
+		}
+		const startNode = rng.startContainer,
 			startOffset = rng.startOffset;
-		let text = '';
-		if (elem.contentEditable !== 'true' || textContent) {
+		if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFireFox) {
 			const range = document.createRange();
 			range.selectNodeContents(elem);
 			range.setEnd(startNode, startOffset);
@@ -58,7 +62,7 @@ const contentEditable = {
 	},
 	replace: function(elem, query, text) {
 		const len = this.getText(elem, true).length;
-		const asHtml = elem.contentEditable === 'true' || !/firefox/i.test(navigator.userAgent);
+		const asHtml = elem.contentEditable === 'true' || !this.isFireFox;
 		if (asHtml) {
 			const obj = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', '\'': '&#039;' };
 			text = text.replace(/[<>&"']/g, m => obj[m]);
@@ -94,6 +98,9 @@ const contentEditable = {
 	getSelection: function(elem) {
 		return elem.getRootNode().getSelection();
 	},
+	isFireFox : function() {
+		return /firefox/i.test(navigator.userAgent);
+	}
 };
 
 function createElement(parent, tag, attributes, content) {
