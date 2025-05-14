@@ -29,7 +29,8 @@
       addClosing: true,
       history: true
     }, options);
-    var maxHistory = 300;
+    var maxHistory = 300,
+      isFireFox = /firefox/i.test(window.navigator.userAgent);
     var listeners = [],
       history = [],
       index = -1,
@@ -45,10 +46,8 @@
       overflowY: "auto",
       whiteSpace: "pre-wrap"
     });
-
     var richText = editor.contentEditable !== 'plaintext-only';
     if (richText) editor.setAttribute('contenteditable', 'true');
-
     var highlight = function highlight(pos) {
       if (highlighter && typeof highlighter === 'function') {
         highlighter(editor, pos);
@@ -81,8 +80,7 @@
         return;
       }
       if (event.key === 'Enter') {
-        if (opt.preserveIndent) handleNewLine(event);
-        else if (richText) fixNewLine(event);
+        if (opt.preserveIndent) handleNewLine(event);else fixNewLine(event);
       }
       if (opt.catchTab && event.key === 'Tab') handleTabCharacters(event);
       if (opt.addClosing) handleSelfClosingCharacters(event);
@@ -276,6 +274,7 @@
       }
     }
     function fixNewLine(event) {
+      if (!isFireFox) return;
       preventDefault(event, true);
       if (!getText().after) {
         insertText('\n ', 1);
@@ -511,10 +510,18 @@
       return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z';
     }
     function insert(text) {
-      var asHtml = elem.contentEditable === 'true' || !/firefox/i.test(window.navigator.userAgent);
+      var asHtml = richText || !isFireFox;
       if (asHtml) {
-		  var obj = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', '\'': '&#039;' };
-		  text = text.replace(/[<>&"']/g, function (m) { return obj[m]; });
+        var obj = {
+          '<': '&lt;',
+          '>': '&gt;',
+          '&': '&amp;',
+          '"': '&quot;',
+          '\'': '&#039;'
+        };
+        text = text.replace(/[<>&"']/g, function (m) {
+          return obj[m];
+        });
       }
       document.execCommand(asHtml ? 'insertHTML' : 'insertText', false, text);
     }

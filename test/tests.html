@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<title>Test</title>
+<link href="../dist/auto-complete.css" rel="stylesheet">
+<style>
+    body { margin: 20px 100px; background: #f0f0f0; }
+    /*.description { height: 100px; }*/
+    #results { max-height: 400px; width: 50%; margin: 20px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ccc; overflow: auto; }
+    progress { width: 50%; }
+    input {
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+        margin-bottom: 20px;
+        width: 50%;
+    }
+    textarea {
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+        margin-bottom: 20px;
+        width: 50%;
+        height: 20px;
+    }
+    *[contenteditable] {
+        background: #f0f0f0;
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+        margin-bottom: 20px;
+        width: 50%;
+    }
+    .passed { color: green; }
+    .failed { color: red; }
+  
+  </style>
+</head>
+<body lang='en'>
+<h1>Autocomplete tests</h1>
+<div class="description">
+	<div class="content">
+		<p></p>
+	</div>
+</div>
+
+<div id="progress">
+	<div>
+		<progress id="callbacks-progress" max="100" value="0">0</progress>
+	</div>
+	<div>
+		<progress id="searching-progress" max="100" value="0">0</progress>
+	</div>
+</div>
+
+<div id="results">
+</div>
+
+<div id="test-area">
+</div>
+
+</body>
+<!-- <script src="../demo/static/auto-complete.js"></script> -->
+<script src="../dist/auto-complete.js"></script>
+<script src="callbacks-tests.js"></script>
+<script src="search-tests.js"></script> 
+<script>
+//const opt = { debugRuns: true };
+//const opt = { debug: true }; // auto-complete.js debug
+
+//const cbTests = new callbacksTests(opt);
+const cbTests = new callbacksTests();
+cbTests.runTests(() => { // done callback to run tests in succession
+	
+});
+
+</script>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
