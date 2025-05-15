@@ -30,7 +30,7 @@
       history: true
     }, options);
     var maxHistory = 300,
-      isFireFox = /firefox/i.test(window.navigator.userAgent);
+      isFirefox = /firefox/i.test(window.navigator.userAgent);
     var listeners = [],
       history = [],
       index = -1,
@@ -274,12 +274,13 @@
       }
     }
     function fixNewLine(event) {
-      if (!isFireFox) return;
-      preventDefault(event, true);
-      if (!getText().after) {
-        insertText('\n ', 1);
-      } else {
-        insert('\n');
+      if (richText || isFirefox) {
+        preventDefault(event, true);
+        if (!getText().after) {
+          insertText('\n ', 1);
+        } else {
+          insert('\n');
+        }
       }
     }
     function handleSelfClosingCharacters(event) {
@@ -510,7 +511,7 @@
       return (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z';
     }
     function insert(text) {
-      var asHtml = richText || !isFireFox;
+      var asHtml = richText || !isFirefox;
       if (asHtml) {
         var obj = {
           '<': '&lt;',

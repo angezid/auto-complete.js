@@ -3,11 +3,11 @@ const contentEditable = {
 	caretCoordinates: null,
 
 	getText: function(elem, textContent) {
-		const selection = this.getSelection(elem);
-		let text = '', 
+		const sel = this.getSelection(elem);
+		let text = '',
 			rng;
 
-		if ( !selection.rangeCount || (rng = selection.getRangeAt(0)).startContainer === elem) {
+		if ( !sel.rangeCount || (rng = sel.getRangeAt(0)).startContainer === elem) {
 			this.caretCoordinates = elem.getBoundingClientRect();
 			return elem.textContent;
 		}
@@ -15,7 +15,7 @@ const contentEditable = {
 		const startNode = rng.startContainer,
 			startOffset = rng.startOffset;
 
-		if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFireFox) {
+		if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFirefox()) {
 			const range = document.createRange();
 			range.selectNodeContents(elem);
 			range.setEnd(startNode, startOffset);
@@ -24,9 +24,15 @@ const contentEditable = {
 			if (textContent) return text;
 
 		} else {
-			selection.setBaseAndExtent(elem, 0, startNode, startOffset);
-			text = selection.toString();
-			selection.collapse(startNode, startOffset);
+			const anchorNode = sel.anchorNode,
+				anchorOffset = sel.anchorOffset,
+				focusNode = sel.focusNode,
+				focusOffset = sel.focusOffset;
+
+			sel.setBaseAndExtent(elem, 0, startNode, startOffset);
+			text = sel.toString();
+			// restores previous selection
+			sel.setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
 		}
 
 		let rect = rng.getBoundingClientRect();
@@ -42,7 +48,7 @@ const contentEditable = {
 	replace: function(elem, query, text) {
 		const len = this.getText(elem, true).length;
 		// fixes problem when suggestion contains line breaks
-		const asHtml = elem.contentEditable === 'true' || !this.isFireFox;
+		const asHtml = elem.contentEditable === 'true' || !this.isFirefox();
 
 		if (asHtml) {
 			const obj = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', '\'': '&#039;' };
@@ -86,7 +92,7 @@ const contentEditable = {
 		return elem.getRootNode().getSelection();
 	},
 
-	isFireFox : function() {
+	isFirefox : function() {
 		return /firefox/i.test(navigator.userAgent);
 	}
 };

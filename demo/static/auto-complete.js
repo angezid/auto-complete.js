@@ -54,25 +54,29 @@
   var contentEditable = {
     caretCoordinates: null,
     getText: function getText(elem, textContent) {
-      var selection = this.getSelection(elem);
+      var sel = this.getSelection(elem);
       var text = '',
         rng;
-      if (!selection.rangeCount || (rng = selection.getRangeAt(0)).startContainer === elem) {
+      if (!sel.rangeCount || (rng = sel.getRangeAt(0)).startContainer === elem) {
         this.caretCoordinates = elem.getBoundingClientRect();
         return elem.textContent;
       }
       var startNode = rng.startContainer,
         startOffset = rng.startOffset;
-      if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFireFox) {
+      if (textContent || elem.contentEditable === 'plaintext-only' && !this.isFirefox()) {
         var range = document.createRange();
         range.selectNodeContents(elem);
         range.setEnd(startNode, startOffset);
         text = range.toString();
         if (textContent) return text;
       } else {
-        selection.setBaseAndExtent(elem, 0, startNode, startOffset);
-        text = selection.toString();
-        selection.collapse(startNode, startOffset);
+        var anchorNode = sel.anchorNode,
+          anchorOffset = sel.anchorOffset,
+          focusNode = sel.focusNode,
+          focusOffset = sel.focusOffset;
+        sel.setBaseAndExtent(elem, 0, startNode, startOffset);
+        text = sel.toString();
+        sel.setBaseAndExtent(anchorNode, anchorOffset, focusNode, focusOffset);
       }
       var rect = rng.getBoundingClientRect();
       if (rect.x === 0 && rect.y === 0) {
@@ -83,7 +87,7 @@
     },
     replace: function replace(elem, query, text) {
       var len = this.getText(elem, true).length;
-      var asHtml = elem.contentEditable === 'true' || !this.isFireFox;
+      var asHtml = elem.contentEditable === 'true' || !this.isFirefox();
       if (asHtml) {
         var obj = {
           '<': '&lt;',
@@ -127,7 +131,7 @@
     getSelection: function getSelection(elem) {
       return elem.getRootNode().getSelection();
     },
-    isFireFox: function isFireFox() {
+    isFirefox: function isFirefox() {
       return /firefox/i.test(navigator.userAgent);
     }
   };

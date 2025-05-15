@@ -121,6 +121,7 @@
 
 			if (length < opt.threshold) {
 				start();
+				return; 
 			}
 
 			const text = testArray[index];
