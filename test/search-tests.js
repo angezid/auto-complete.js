@@ -24,33 +24,36 @@
 
 	function searchingTests(options) {
 		testProgress = document.getElementById('searching-progress');
-		progressStep = 0.5;
+		progressStep = 0.25;
 
 		if (options) {
 			opts.forEach((opt, i) => { opts[i] = { ...opt, ...options } });
 		}
 
 		this.runTests = (done) => {
-			//runTests(done);
-			done();
+			runTests(done);
+			//done();
 		};
 	}
 
 	async function runTests(done) {
-		await runIndexObjectCreationTest();
+		testInfo('Indexed object creation test');
+		await runIndexedObjectCreationTest();
+		testInfo('Searching test');
 		await runSearchingTest();
+		testInfo('Case sensitive searching test');
+		await runSearchingTestCaseSensitive(); // this test changes array1, array2, and array3 (randomly set letters to upper case);
 		testProgress.value = 100;
 		done();
 	}
 
-	async function runIndexObjectCreationTest() {
+	async function runIndexedObjectCreationTest() {
 		await testSingleArrayIndexObjectCreation();
 		await testArrayOfArrayIndexObjectCreation();
 	}
 
 	async function runSearchingTest() {
 		const tags = ['input', 'textarea', 'div', 'blockquote'];
-		//const tags = ['div', 'blockquote'];
 
 		for await (const tag of tags) {
 			await testSearchingSingleArray(tag);
@@ -64,6 +67,27 @@
 		}
 	}
 
+	async function runSearchingTestCaseSensitive() {
+		array1.forEach((word, i) => {
+			array1[i] =Array.from(word).map(letter => Math.round((Math.random())) ? letter.toUpperCase() : letter).join('');
+		});
+
+		for (let i = 0; i < array1.length; i++) {
+			const word = array1[i];
+			array2[i] =Array.from(array2[i]).map((letter, j) => convertCase(j, word, letter)).join('');
+			array3[i] =Array.from(array3[i]).map((letter, j) => convertCase(j, word, letter)).join('');
+		}
+
+		function convertCase(index, word, letter) {
+			const toUpper = index < word.length && word[index] === word[index].toUpperCase();
+			return toUpper ? letter.toUpperCase() : letter;
+		}
+
+		opts.forEach((opt, i) => { opts[i] = { ...opt, caseSensitive: true } });
+
+		await runSearchingTest();
+	}
+
 	async function testSingleArrayIndexObjectCreation() {
 		const title = 'Single array indexed object creation; ';
 
@@ -72,7 +96,7 @@
 			const obj = await instance.createIndexes(array1);
 
 			const success = testObject(array1, opt, obj);
-			const msg = title + '\'threshold: ' + opt.threshold + '\' test is ' + (success ? 'passed' : 'failed');
+			const msg = title + '\'threshold: ' + opt.threshold + '\' test ' + (success ? 'passed' : 'failed');
 			logTestResults(msg);
 		}
 	}
@@ -86,7 +110,7 @@
 			const obj = await instance.createIndexes(array);
 
 			const success = testArrayOfArrayObject(array, opt, obj);
-			const msg = title + '\'threshold: ' + opt.threshold + '\' test is ' + (success ? 'passed' : 'failed');
+			const msg = title + '\'threshold: ' + opt.threshold + '\' test ' + (success ? 'passed' : 'failed');
 			logTestResults(msg);
 		}
 	}
@@ -160,7 +184,10 @@
 
 	function testSearching(array, opt, tag, num, title) {
 		return new Promise((resolve) => {
-			testArraySearching(array, opt, tag, num, (msg, obj) => {
+			testArraySearching(array, opt, tag, num, (success, editor, obj) => {
+				const attr = isText(editor) ? '' : '\'contenteditable="' + editor.contentEditable + '"\', ';
+				const caseSensitive = opt.caseSensitive ? '\'caseSensitive="true"\', ' : '';
+				const msg = '; \'' + tag + '\', ' + attr + caseSensitive + '\'threshold: ' + opt.threshold + '\' test ' + (success ? 'passed' : 'failed');
 				logTestResults(title + msg);
 
 				if (opt.debugRuns) console.log(obj);
@@ -211,9 +238,7 @@
 			if (full && ++index >= testArray.length || !full && !(index = getNext(index, testArray.length))) {
 				if (++length > maxThreshold) {
 					success = success && runs > 0 && filter === runs;
-					const attr = isText(editor) ? '' : '\'contenteditable="' + editor.contentEditable + '"\', ';
-					const msg = '; \'' + tag + '\', ' + attr + '\'threshold: ' + opt.threshold + '\' test is ' + (success ? 'passed' : 'failed');
-					done(msg, { runs, filter });
+					done(success, editor, { runs, filter });
 					return;
 				}
 				index = 0;
@@ -329,6 +354,13 @@
 
 	function progress(msg) {
 		testProgress.value += progressStep;
+	}
+
+	function testInfo(text) {
+		const results = document.querySelector('#results');
+		const h4 = document.createElement('h4');
+		h4.textContent = text;
+		results.appendChild(h4);
 	}
 
 	function logTestResults(text) {
