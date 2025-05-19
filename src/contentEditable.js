@@ -23,7 +23,7 @@ const contentEditable = {
 
 			if (textContent) return text;
 
-		} else {
+		} else { // Firefox contentEditable 'plaintext-only' state
 			const anchorNode = sel.anchorNode,
 				anchorOffset = sel.anchorOffset,
 				focusNode = sel.focusNode,
@@ -37,7 +37,7 @@ const contentEditable = {
 
 		let rect = rng.getBoundingClientRect();
 
-		if (rect.x === 0 && rect.y === 0) {
+		if (rect.x === 0 && rect.y === 0) { // Firefox
 			rect = startNode.getBoundingClientRect();
 		}
 		this.caretCoordinates = rect;

@@ -8,7 +8,7 @@
 <style>
     body { margin: 20px 100px; background: #f0f0f0; }
     /*.description { height: 100px; }*/
-    #results { max-height: 400px; width: 50%; margin: 20px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ccc; overflow: auto; }
+    #results { max-height: 400px; width: 70%; margin: 20px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ccc; overflow: auto; }
     progress { width: 50%; }
     input {
         border: 1px solid #ccc;
@@ -21,7 +21,7 @@
         padding: 5px 10px;
         margin-bottom: 20px;
         width: 50%;
-        height: 20px;
+        min-height: 20px;
     }
     *[contenteditable] {
         background: #f0f0f0;
@@ -59,19 +59,53 @@
 </div>
 
 </body>
-<!-- <script src="../demo/static/auto-complete.js"></script> -->
 <script src="../dist/auto-complete.js"></script>
 <script src="callbacks-tests.js"></script>
 <script src="search-tests.js"></script> 
 <script>
+const opt = {};
 //const opt = { debugRuns: true };
 //const opt = { debug: true }; // auto-complete.js debug
 
-//const cbTests = new callbacksTests(opt);
-const cbTests = new callbacksTests();
+const cbTests = new callbacksTests(opt);
 cbTests.runTests(() => { // done callback to run tests in succession
+	testResults();
 	
+	/*const st = new searchingTests(opt);
+    st.runTests(() => {
+        testResults();
+    });*/
 });
+
+//new searchingTests().runTests();
+
+function testResults() {
+	let passed = 0, 
+		failed = 0;
+	document.querySelectorAll('#results p span').forEach((span) => {
+		if (span.className === 'failed') failed++;
+		else if (span.className === 'passed') passed++;
+	});
+	
+	const results = document.querySelector('#results');
+	const h3 = document.createElement('h3');
+	h3.textContent = 'Test results';
+	results.appendChild(h3);
+	
+	let text = failed === 0 ? 'All tests ' : 'Tests ';
+	let html = '<span class="passed">' + text + ' passed = ' + passed + '</span>';
+	
+	text = passed === 0 ? 'All tests ' : 'Tests ';
+	if (failed > 0) html += '<br><span class="failed">' + text + ' failed = ' + failed + '</span>';
+	
+	const p = document.createElement('p');
+	p.innerHTML = html;
+	results.appendChild(p);
+	p.scrollIntoView({
+		block: 'center',
+		behavior: 'instant'
+	});
+}
 
 </script>
 

@@ -12,7 +12,7 @@
 })(typeof global !== "undefined" ? global : this.window || this.global, function(root) {
 	'use strict';
 	// all words with diacritics characters are just for testing, they're not real
-
+	
 	const opts = [{ threshold: 1, }, { threshold: 2 }, { threshold: 3 }, { threshold: 4 }];
 	const timeScale = 1,
 		maxThreshold = 4;
@@ -20,14 +20,15 @@
 
 	function callbacksTests(options) {
 		testProgress = document.getElementById('callbacks-progress');
-		progressStep = 0.45;
+		progressStep = 0.33;
 
 		if (options) {
-			opts.forEach((opt, i) => { opts[i] = assign(opt, options); });
+			opts.forEach((opt, i) => { opts[i] = { ...opt, ...options } });
 		}
 
 		this.runTests = (done) => {
 			runTests(done);
+			//done();
 		};
 	}
 
@@ -36,12 +37,13 @@
 		clear();
 		await runSelectCallbackTest();
 		clear();
+		testProgress.value = 100;
 		done();
 	}
 
 	async function runSelectCallbackTest() {
 		const array = ["adjective", "adjective2", "ádjective", "adjectíve", ],
-			tags = ['input', 'textarea', 'div'],
+			tags = ['input', 'textarea', 'div', 'blockquote'],
 			//tags = ['div'],
 			title = '\'select()\' callback';
 
@@ -60,9 +62,10 @@
 
 	async function testSelect(array, opt, tag, title) {
 		return new Promise((resolve) => {
-			const option = assign({ optimize: false }, opt);
+			const option = { optimize: false, ...opt };
 
-			testSelectCallback(array, option, tag, (msg, obj) => {
+			testSelectCallback(array, option, tag, (success, obj) => {
+				const msg = ' for \'' + tag + '\', \'threshold: ' + opt.threshold + '\' test ' + (success ? 'passed' : 'failed');
 				logTestResults(title + msg);
 
 				if (opt.debugRuns) console.log(obj);
@@ -82,7 +85,7 @@
 			open = 0,
 			select = 0;
 
-		const opt = assign({
+		const opt = {
 			suggestions: testArray,
 			open: listbox => {
 				selectListItem(listbox);
@@ -93,8 +96,9 @@
 				select++;
 				return data.text;
 			},
-			event: new InputEvent("input", { inputType: 'insertReplacementText' })
-		}, options);
+			event: new InputEvent("input", { inputType: 'insertReplacementText' }),
+			...options
+		};
 
 		const { editor } = createElement(opt, tag);
 		editor.addEventListener('input', checkReplacement);
@@ -103,14 +107,13 @@
 		start();
 
 		async function start() {
-			if (++index >= opts.length) {
+			if (++index >= testArray.length) {
 				if (++length > maxThreshold) {
 					length = 1;
 
 					if (++startIndex > maxStartIndex) {
 						success = success && open === runs && select === runs;
-						const msg = ' for \'' + tag + '\', \'threshold: ' + opt.threshold + '\' test is ' + (success ? 'passed' : 'failed');
-						done(msg, { runs, open, select });
+						done(success, { runs, open, select });
 						return;
 					}
 					progress();
@@ -121,7 +124,7 @@
 
 			if (length < opt.threshold) {
 				start();
-				return; 
+				return;
 			}
 
 			const text = testArray[index];
@@ -149,7 +152,7 @@
 			const text = getText(e.target);
 
 			if (text !== selectedText) {
-				console.log('getText()', text, selectedText);
+				console.log('getText()', text, '|', selectedText);
 				success = false;
 			}
 			start();
@@ -182,13 +185,14 @@
 		const array = ["able", "bāck", "call", ],
 			title = '\'listItem()\' callback';
 
-		const option = assign({ optimize: false }, opts[0]);
+		const option = { optimize: false, ...opts[0] };
 		await testListItemCallback(array, option, title);
 	}
 
 	function testListItemCallback(array, opt, title) {
 		return new Promise((resolve) => {
-			testItemCallback(array, opt, (msg, obj) => {
+			testItemCallback(array, opt, (success, obj) => {
+				const msg = ' test ' + (success ? 'passed' : 'failed');
 				logTestResults(title + msg);
 
 				if (opt.debugRuns) console.log(obj);
@@ -209,7 +213,7 @@
 			success = true,
 			text;
 
-		const opt = assign({
+		const opt = {
 			suggestions: testArray,
 			listTag: listTag,
 			listClass: listClass,
@@ -217,7 +221,7 @@
 			listItemClass: itemClass,
 			startsWith: true,
 			highlight: true,
-			listItem: (element, data) => {
+			listItem:(element, data) => {
 				checkElement(element);
 				checkData(data);
 			},
@@ -226,7 +230,8 @@
 				listbox.style.display = 'none';
 				start();
 			},
-		}, options);
+			...options
+		};
 
 		const { editor } = createElement(opt);
 		const runs = testArray.length * maxThreshold - testArray.length * (opt.threshold - 1);
@@ -236,8 +241,7 @@
 			if (++index >= testArray.length) {
 				if (++length > 4) {
 					success = success && open === runs;
-					const msg = ' test is ' + (success ? 'passed' : 'failed');
-					done(msg, { runs, open });
+					done(success, { runs, open });
 					return;
 				}
 				index = 0;
@@ -325,41 +329,47 @@
 			instance = new autoComplete(editor, options);
 
 		if ( !isText(editor)) {
-			editor.setAttribute('contenteditable', 'true');
+			if (tag === 'div') {
+				editor.setAttribute('contenteditable', 'plaintext-only');
+				if (editor.contentEditable !== 'plaintext-only') {
+					editor.setAttribute('contenteditable', 'true');
+					logTestResults('Browser does not supports contenteditable \'plaintext-only\' state');
+				}
+			}
+			else editor.setAttribute('contenteditable', 'true');
 		}
 		editor.setAttribute('spellcheck', 'false');
 		document.body.appendChild(editor);
 
 		return { editor, instance };
 	}
-
+	
 	function setText(elem, text) {
+		const ch = elem instanceof HTMLInputElement || Math.round(Math.random()) ? ' ' : '\n';
+		
 		if (isText(elem)) {
-			elem.value = text;
+			elem.value = (elem.value && elem.value.length < 100 ? elem.value + ch : '') + text;
 			return;
 		}
-
-		elem.innerHTML = '';
+		
+		const content = elem.textContent;
+		text = (content && content.length < 100 ? content + ch : '') + text;
 		const textNode = document.createTextNode(text);
+		elem.innerHTML = '';
 		elem.appendChild(textNode);
 
-		const sel = elem.getRootNode().getSelection();
-		sel.setBaseAndExtent(textNode, text.length, textNode, text.length);
+		const sel = elem.getRootNode().getSelection(),
+			offset = textNode.textContent.length;
+		sel.setBaseAndExtent(textNode, offset, textNode, offset);
 	}
 
 	function getText(elem) {
-		if (isText(elem)) {
-			return elem.value;
-		}
-		return elem.textContent;
+		const text = isText(elem) ? elem.value : elem.textContent;
+		return text.replace(/(?:^[^]+?\s|^\s?)(\S+)$/, '$1'); 
 	}
 
 	function isText(elem) {
 		return elem instanceof HTMLInputElement || elem instanceof HTMLTextAreaElement;
-	}
-
-	function assign(o1, o2) {
-		return Object.assign({}, o1, o2);
 	}
 
 	function progress(msg) {
@@ -391,7 +401,7 @@
 		results.appendChild(p);
 		p.scrollIntoView({
 			block: 'nearest',
-			behavior: 'smooth'
+			behavior: 'instant'
 		});
 	}
 
