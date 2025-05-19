@@ -12,7 +12,7 @@
 })(typeof global !== "undefined" ? global : this.window || this.global, function(root) {
 	'use strict';
 	// all words with diacritics characters are just for testing, they're not real
-	
+
 	const opts = [{ threshold: 1, }, { threshold: 2 }, { threshold: 3 }, { threshold: 4 }];
 	const timeScale = 1,
 		maxThreshold = 4;
@@ -343,15 +343,15 @@
 
 		return { editor, instance };
 	}
-	
+
 	function setText(elem, text) {
 		const ch = elem instanceof HTMLInputElement || Math.round(Math.random()) ? ' ' : '\n';
-		
+
 		if (isText(elem)) {
 			elem.value = (elem.value && elem.value.length < 100 ? elem.value + ch : '') + text;
 			return;
 		}
-		
+
 		const content = elem.textContent;
 		text = (content && content.length < 100 ? content + ch : '') + text;
 		const textNode = document.createTextNode(text);
@@ -365,7 +365,7 @@
 
 	function getText(elem) {
 		const text = isText(elem) ? elem.value : elem.textContent;
-		return text.replace(/(?:^[^]+?\s|^\s?)(\S+)$/, '$1'); 
+		return text.replace(/(?:^[^]+?\s|^\s?)(\S+)$/, '$1');
 	}
 
 	function isText(elem) {

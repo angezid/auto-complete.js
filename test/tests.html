@@ -32,7 +32,7 @@
     }
     .passed { color: green; }
     .failed { color: red; }
-  
+
   </style>
 </head>
 <body lang='en'>
@@ -61,7 +61,7 @@
 </body>
 <script src="../dist/auto-complete.js"></script>
 <script src="callbacks-tests.js"></script>
-<script src="search-tests.js"></script> 
+<script src="search-tests.js"></script>
 <script>
 const opt = {};
 //const opt = { debugRuns: true };
@@ -69,35 +69,33 @@ const opt = {};
 
 const cbTests = new callbacksTests(opt);
 cbTests.runTests(() => { // done callback to run tests in succession
-	testResults();
-	
-	/*const st = new searchingTests(opt);
+	const st = new searchingTests(opt);
     st.runTests(() => {
         testResults();
-    });*/
+    });
 });
 
 //new searchingTests().runTests();
 
 function testResults() {
-	let passed = 0, 
+	let passed = 0,
 		failed = 0;
 	document.querySelectorAll('#results p span').forEach((span) => {
 		if (span.className === 'failed') failed++;
 		else if (span.className === 'passed') passed++;
 	});
-	
+
 	const results = document.querySelector('#results');
 	const h3 = document.createElement('h3');
 	h3.textContent = 'Test results';
 	results.appendChild(h3);
-	
+
 	let text = failed === 0 ? 'All tests ' : 'Tests ';
 	let html = '<span class="passed">' + text + ' passed = ' + passed + '</span>';
-	
+
 	text = passed === 0 ? 'All tests ' : 'Tests ';
 	if (failed > 0) html += '<br><span class="failed">' + text + ' failed = ' + failed + '</span>';
-	
+
 	const p = document.createElement('p');
 	p.innerHTML = html;
 	results.appendChild(p);
