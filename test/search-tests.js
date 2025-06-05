@@ -39,10 +39,13 @@
 	async function runTests(done) {
 		testInfo('Indexed object creation test');
 		await runIndexedObjectCreationTest();
+
 		testInfo('Searching test');
+		toRandomCase([array1, array2, array3]);
 		await runSearchingTest();
+
 		testInfo('Case sensitive searching test');
-		await runSearchingTestCaseSensitive(); // this test changes array1, array2, and array3 (randomly set letters to upper case);
+		await runSearchingTestCaseSensitive();
 		testProgress.value = 100;
 		done();
 	}
@@ -67,10 +70,16 @@
 		}
 	}
 
-	async function runSearchingTestCaseSensitive() {
-		array1.forEach((word, i) => {
-			array1[i] =Array.from(word).map(letter => Math.round((Math.random())) ? letter.toUpperCase() : letter).join('');
+	function toRandomCase(array) {
+		array.forEach((arr) => {
+			arr.forEach((word, i) => {
+				arr[i] =Array.from(word).map(ch => Math.round((Math.random())) ? ch.toUpperCase() : ch.toLowerCase()).join('');
+			});
 		});
+	}
+
+	async function runSearchingTestCaseSensitive() {
+		toRandomCase([array1]);
 
 		for (let i = 0; i < array1.length; i++) {
 			const word = array1[i];
@@ -78,9 +87,9 @@
 			array3[i] =Array.from(array3[i]).map((letter, j) => convertCase(j, word, letter)).join('');
 		}
 
-		function convertCase(index, word, letter) {
-			const toUpper = index < word.length && word[index] === word[index].toUpperCase();
-			return toUpper ? letter.toUpperCase() : letter;
+		function convertCase(i, word, letter) {
+			const toUpper = i < word.length && word[i] === word[i].toUpperCase();
+			return toUpper ? letter.toUpperCase() : letter.toLowerCase();
 		}
 
 		opts.forEach((opt, i) => { opts[i] = { ...opt, caseSensitive: true } });
@@ -333,26 +342,11 @@
 		sel.setBaseAndExtent(textNode, offset, textNode, offset);
 	}
 
-	function setText2(elem, text) {
-		if (isText(elem)) {
-			elem.value += ' ' + text;
-			return;
-		}
-
-		const textNode = document.createTextNode(elem.textContent + ' ' + text);
-		elem.innerHTML = '';
-		elem.appendChild(textNode);
-
-		const sel = elem.getRootNode().getSelection(),
-			offset = textNode.textContent.length;
-		sel.setBaseAndExtent(textNode, offset, textNode, offset);
-	}
-
 	function isText(elem) {
 		return elem instanceof HTMLInputElement || elem instanceof HTMLTextAreaElement;
 	}
 
-	function progress(msg) {
+	function progress() {
 		testProgress.value += progressStep;
 	}
 

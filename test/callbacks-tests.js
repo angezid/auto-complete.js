@@ -372,18 +372,8 @@
 		return elem instanceof HTMLInputElement || elem instanceof HTMLTextAreaElement;
 	}
 
-	function progress(msg) {
+	function progress() {
 		testProgress.value += progressStep;
-	}
-
-	function logError(error) {
-		console.error(error);
-
-		const results = document.querySelector('#results');
-		const p = document.createElement('p');
-		p.className = 'error';
-		p.textContent = error;
-		results.appendChild(p);
 	}
 
 	function logTestResults(text) {
